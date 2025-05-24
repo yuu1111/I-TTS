@@ -178,3 +178,7 @@ hs_err_pid*
 # 実行関係
 .run/*
 !.run/runConfigurations
+
+# コンパイル関係
+core/bin/*
+selfhost/bin/*
