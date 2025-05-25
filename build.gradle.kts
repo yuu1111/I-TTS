@@ -1,6 +1,7 @@
 plugins {
     id("java")
     id("org.jetbrains.changelog") version "2.0.0"
+    kotlin("jvm")
 }
 
 version = if (System.getenv("GITHUB_REF") != null && System.getenv("GITHUB_REF").startsWith("refs/tags/v")) {
@@ -49,4 +50,12 @@ java {
 
     sourceCompatibility = JavaVersion.VERSION_17
     targetCompatibility = JavaVersion.VERSION_17
+}
+
+dependencies {
+    implementation(kotlin("stdlib-jdk8"))
+}
+
+repositories {
+    mavenCentral()
 }

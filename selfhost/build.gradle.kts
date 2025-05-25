@@ -3,6 +3,7 @@ import com.github.jengelman.gradle.plugins.shadow.tasks.ShadowJar
 plugins {
     id("com.github.johnrengelman.shadow") version "7.0.0"
     id("checkstyle")
+    kotlin("jvm")
 }
 
 base {
@@ -29,8 +30,9 @@ configurations {
 dependencies {
     shadowIn(project(":core", "default"))
 
-    shadowIn("blue.endless:jankson:1.2.1")
-    shadowIn("redis.clients:jedis:4.4.0-m1")
+    shadowIn("blue.endless:jankson:1.2.3")
+    shadowIn("redis.clients:jedis:6.0.0")
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 tasks.getByName<Test>("test") {
@@ -52,4 +54,12 @@ tasks.named<ShadowJar>("shadowJar") {
 
 tasks.named("build") {
     dependsOn(tasks.named("shadowJar"))
+}
+
+repositories {
+    mavenCentral()
+}
+
+kotlin {
+    jvmToolchain(17)
 }

@@ -1,6 +1,7 @@
 plugins {
     id("maven-publish")
     id("checkstyle")
+    kotlin("jvm")
 }
 
 base {
@@ -13,7 +14,7 @@ checkstyle {
 }
 
 dependencies {
-    testImplementation(platform("org.junit:junit-bom:5.10.0"))
+    testImplementation(platform("org.junit:junit-bom:5.11.2"))
     testImplementation("org.junit.jupiter:junit-jupiter")
     testImplementation("org.mockito:mockito-junit-jupiter:5.14.2")
 
@@ -24,17 +25,18 @@ dependencies {
     api("org.apache.commons:commons-lang3:3.16.0")
     api("com.google.code.gson:gson:2.11.0")
     api("com.google.guava:guava:33.2.1-jre")
-    api("org.apache.logging.log4j:log4j-core:3.0.0-beta2")
+    api("org.apache.logging.log4j:log4j-core:3.0.0")
     api("dev.felnull:felnull-java-library:1.75")
-    api("dev.arbjerg:lavaplayer:2.2.1")
+    api("dev.arbjerg:lavaplayer:2.2.3")
     api("commons-io:commons-io:2.16.1")
     api("com.ibm.icu:icu4j:75.1")
     api("com.atilika.kuromoji:kuromoji-ipadic:0.9.0")
     api("com.zaxxer:HikariCP:5.1.0")
-    api("mysql:mysql-connector-java:8.0.32")
+    api("mysql:mysql-connector-java:8.0.33")
     api("org.xerial:sqlite-jdbc:3.46.0.1")
 
     api("org.jetbrains:annotations:24.1.0")
+    implementation(kotlin("stdlib-jdk8"))
 }
 
 tasks.getByName<Test>("test") {
@@ -78,4 +80,12 @@ publishing {
             }
         }
     }
+}
+
+repositories {
+    mavenCentral()
+}
+
+kotlin {
+    jvmToolchain(17)
 }
