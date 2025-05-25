@@ -25,7 +25,7 @@ dependencies {
     api("org.apache.commons:commons-lang3:3.16.0")
     api("com.google.code.gson:gson:2.11.0")
     api("com.google.guava:guava:33.2.1-jre")
-    api("org.apache.logging.log4j:log4j-core:3.0.0")
+    api("org.apache.logging.log4j:log4j-core:3.0.0-beta2")
     api("dev.felnull:felnull-java-library:1.75")
     api("dev.arbjerg:lavaplayer:2.2.3")
     api("commons-io:commons-io:2.16.1")
