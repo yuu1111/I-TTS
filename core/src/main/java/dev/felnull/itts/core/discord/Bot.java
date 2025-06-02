@@ -3,16 +3,24 @@ package dev.felnull.itts.core.discord;
 import dev.felnull.itts.core.ITTSRuntimeUse;
 import dev.felnull.itts.core.ImmortalityTimer;
 import dev.felnull.itts.core.discord.command.*;
+import dev.felnull.itts.core.savedata.BotStateData;
+import dev.felnull.itts.core.tts.TTSInstance;
+import dev.felnull.itts.core.tts.saidtext.StartupSaidText;
+import dev.felnull.itts.core.voice.VoiceType;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.OnlineStatus;
 import net.dv8tion.jda.api.entities.Activity;
+import net.dv8tion.jda.api.entities.Guild;
+import net.dv8tion.jda.api.entities.channel.middleman.AudioChannel;
+import net.dv8tion.jda.api.entities.channel.middleman.MessageChannel;
+import net.dv8tion.jda.api.exceptions.InsufficientPermissionException;
 import net.dv8tion.jda.api.managers.Presence;
 import net.dv8tion.jda.api.requests.GatewayIntent;
-import net.dv8tion.jda.api.utils.cache.CacheFlag;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -38,8 +46,7 @@ public class Bot implements ITTSRuntimeUse {
         registeringCommands();
 
         this.jda = JDABuilder.createDefault(getConfigManager().getConfig().getBotToken())
-                .enableIntents(GatewayIntent.MESSAGE_CONTENT, GatewayIntent.GUILD_PRESENCES)
-                .enableCache(CacheFlag.ACTIVITY)
+                .enableIntents(GatewayIntent.MESSAGE_CONTENT)
                 .addEventListeners(new DCEventListener(this))
                 .build();
 
@@ -64,12 +71,11 @@ public class Bot implements ITTSRuntimeUse {
     }
 
     private void reconnect() {
-        /*CompletableFuture.runAsync(() -> {
-            long botId = ITTSRuntime.getInstance().getBot().getJDA().getSelfUser().getIdLong();
-            Map<Long, TTSChannelPair> connectedChannels = SaveDataManager.getInstance().getRepository().getAllConnectedChannel(botId);
+        CompletableFuture.runAsync(() -> {
+            Map<Long, BotStateData> allData = getSaveDataManager().getAllBotStateData();
             long selfId = getJDA().getSelfUser().getIdLong();
 
-            connectedChannels.forEach((guildId, data) -> {
+            allData.forEach((guildId, data) -> {
                 Guild guild = getJDA().getGuildById(guildId);
 
                 if (guild != null && data.getConnectedAudioChannel() >= 0 && data.getReadAroundTextChannel() >= 0) {
@@ -119,7 +125,7 @@ public class Bot implements ITTSRuntimeUse {
                 }
             });
 
-        }, getAsyncExecutor());*/
+        }, getAsyncExecutor());
     }
 
     private void registeringCommands() {
@@ -169,9 +175,5 @@ public class Bot implements ITTSRuntimeUse {
 
     public JDA getJDA() {
         return jda;
-    }
-
-    public long getBotId() {
-        return jda.getSelfUser().getIdLong();
     }
 }

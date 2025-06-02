@@ -1,186 +1,198 @@
 package dev.felnull.itts.core.savedata;
 
-import dev.felnull.itts.core.ITTSRuntime;
-import dev.felnull.itts.core.savedata.dao.DAO;
-import dev.felnull.itts.core.savedata.dao.DAOFactory;
-import dev.felnull.itts.core.savedata.legacy.LegacySaveDataLayer;
-import dev.felnull.itts.core.savedata.repository.DataRepository;
-import dev.felnull.itts.core.savedata.repository.RepoErrorListener;
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
+import dev.felnull.itts.core.ITTSBaseManager;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.Unmodifiable;
 
-import java.io.File;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * スレッドセーフな保存データの管理<br/>
+ * セーブデータの管理
  *
  * @author MORIMORI0317
  */
-public class SaveDataManager {
+public class SaveDataManager implements ITTSBaseManager {
 
     /**
-     * インスタンス
+     * セーブデータへのアクセス
      */
-    private static final SaveDataManager INSTANCE = new SaveDataManager();
-
-    /**
-     * ロガー
-     */
-    private static final Logger LOGGER = LogManager.getLogger(SaveDataManager.class);
-
-    /**
-     * SQLiteのDBファイル
-     */
-    private static final File SQLITE_DB_FILE = new File("./save_data.db");
-
-    /**
-     * レポジトリの再作成を行うエラー量
-     */
-    private static final int REPO_REGEN_NUM_OF_ERROR = 5;
-
-    /**
-     * レガシーデータ互換レイヤー
-     */
-    private final LegacySaveDataLayer legacySaveDataLayer = LegacySaveDataLayer.create(this);
-
-    /**
-     * レポジトリ
-     */
-    private final AtomicReference<DataRepository> repository = new AtomicReference<>();
-
-    /**
-     * レポジトリエラー検知用
-     */
-    private final RepoErrorListener errorListener = this::onRepoError;
-
-    /**
-     * エラーのカウンター
-     */
-    private final AtomicInteger errorCounter = new AtomicInteger();
-
-    /**
-     * レポジトリ再作成ロック用オブジェクト
-     */
-    private final Object repRecreateLock = new Object();
-
-    /**
-     * レポジトリ再作成タスク
-     */
-    private RepoRecreateTask repoRecreateTask;
+    private final SaveDataAccess saveDataAccess;
 
     /**
      * コンストラクタ
-     */
-    private SaveDataManager() {
-    }
-
-    public static SaveDataManager getInstance() {
-        return INSTANCE;
-    }
-
-    /**
-     * 初期化<br/>
-     * 必ずコンフィグが読み込まれた後に呼び出してください。
-     */
-    public void init() {
-        DataRepository repo = DataRepository.create(createDAO());
-        repo.init();
-        repo.addErrorListener(errorListener);
-        repository.set(repo);
-    }
-
-    private DAO createDAO() {
-        return DAOFactory.getInstance().createSQLiteDAO(SQLITE_DB_FILE);
-    }
-
-
-    public LegacySaveDataLayer getLegacySaveDataLayer() {
-        return legacySaveDataLayer;
-    }
-
-    /**
-     * レポジトリを取得
      *
-     * @return データレポジトリのインスタンス
+     * @param saveDataAccess セーブデータへのアクセス
+     */
+    public SaveDataManager(SaveDataAccess saveDataAccess) {
+        this.saveDataAccess = saveDataAccess;
+    }
+
+    @Override
+    public @NotNull CompletableFuture<?> init() {
+        return CompletableFuture.runAsync(() -> {
+            if (!saveDataAccess.init()) {
+                throw new RuntimeException("Failed to initialize");
+            }
+
+            getITTSLogger().info("Save data setup complete");
+        }, getAsyncExecutor());
+    }
+
+    /**
+     * 全てのサーバーデータを取得
+     *
+     * @param guildId サーバーID
+     * @return サーバーデータ
      */
     @NotNull
-    public DataRepository getRepository() {
-        DataRepository repo = repository.get();
-
-        if (repo == null) {
-            tryRepRecreate();
-            throw new RuntimeException("The repository is currently being prepared");
-        }
-
-        return repo;
-    }
-
-    private void onRepoError() {
-        if (errorCounter.incrementAndGet() >= REPO_REGEN_NUM_OF_ERROR) {
-            tryRepRecreate();
-        }
-    }
-
-    private void tryRepRecreate() {
-        synchronized (repRecreateLock) {
-            if (repoRecreateTask == null) {
-                // タスクが存在しない場合は作成して開始
-                repoRecreateTask = new RepoRecreateTask();
-                repoRecreateTask.start();
-            }
-        }
-    }
-
-    private void finishRepRecreate() {
-        synchronized (repRecreateLock) {
-            if (repoRecreateTask != null) {
-                // タスクが存在すれば破棄する
-                repoRecreateTask = null;
-            }
-        }
+    public ServerData getServerData(long guildId) {
+        return saveDataAccess.getServerData(guildId);
     }
 
     /**
-     * レポジトリ作成タスク
+     * サーバーごとのユーザデータを取得
+     *
+     * @param guildId サーバーID
+     * @param userId  ユーザID
+     * @return サーバーごとのユーザデータ
      */
-    private final class RepoRecreateTask {
+    @NotNull
+    public ServerUserData getServerUserData(long guildId, long userId) {
+        return saveDataAccess.getServerUserData(guildId, userId);
+    }
 
-        private void start() {
-            try {
-                // 既存のレポジトリを廃棄
-                DataRepository repo = repository.getAndSet(null);
-                if (repo != null) {
-                    repo.removeErrorListener(errorListener);
-                    repo.dispose();
-                }
+    /**
+     * 辞書使用データを取得
+     *
+     * @param guildId サーバーID
+     * @param dictId  辞書ID
+     * @return 辞書使用データ
+     */
+    @NotNull
+    public DictUseData getDictUseData(long guildId, @NotNull String dictId) {
+        return saveDataAccess.getDictUseData(guildId, dictId);
+    }
 
-                // 非同期でレポジトリを作成する
-                CompletableFuture.supplyAsync(() -> {
-                    DataRepository ret = DataRepository.create(createDAO());
-                    ret.init();
-                    ret.addErrorListener(errorListener);
-                    return ret;
-                }, ITTSRuntime.getInstance().getAsyncWorkerExecutor()).whenCompleteAsync((dataRepository, throwable) -> {
+    /**
+     * BOT状態データを取得
+     *
+     * @param guildId サーバーID
+     * @return BOT状態データ
+     */
+    @NotNull
+    public BotStateData getBotStateData(long guildId) {
+        return saveDataAccess.getBotStateData(guildId);
+    }
 
-                    if (throwable == null) {
-                        repository.set(dataRepository);
-                        LOGGER.info("Repository was reloaded");
-                    } else {
-                        LOGGER.error("Failed to load repository", throwable);
-                    }
+    /**
+     * 全てのBOT状態データを取得
+     *
+     * @return 全てのBOTクライアントIDと状態データを含むマップ
+     */
+    @NotNull
+    @Unmodifiable
+    public Map<Long, BotStateData> getAllBotStateData() {
+        return saveDataAccess.getAllBotStateData();
+    }
 
-                    finishRepRecreate();
-                }, ITTSRuntime.getInstance().getAsyncWorkerExecutor());
+    /**
+     * 全てのサーバー辞書データ
+     *
+     * @param guildId サーバーID
+     * @return 全てのサーバー辞書データのリスト
+     */
+    @NotNull
+    @Unmodifiable
+    public List<DictData> getAllServerDictData(long guildId) {
+        return saveDataAccess.getAllServerDictData(guildId);
+    }
 
-            } catch (Throwable throwable) {
-                LOGGER.error("Repository recreation task failed to start");
-                finishRepRecreate();
-            }
+    /**
+     * サーバー辞書データを取得
+     *
+     * @param guildId サーバーID
+     * @param target  対象の文字列
+     * @return 辞書データ
+     */
+    @Nullable
+    public DictData getServerDictData(long guildId, @NotNull String target) {
+        return saveDataAccess.getServerDictData(guildId, target);
+    }
 
-        }
+    /**
+     * サーバー辞書データを追加
+     *
+     * @param guildId 辞書ID
+     * @param target  対象の文字列
+     * @param read    読み
+     */
+    public void addServerDictData(long guildId, @NotNull String target, @NotNull String read) {
+        saveDataAccess.addServerDictData(guildId, target, read);
+    }
+
+    /**
+     * サーバー辞書データを削除
+     *
+     * @param guildId サーバーID
+     * @param target  対象の文字列
+     */
+    public void removeServerDictData(long guildId, @NotNull String target) {
+        saveDataAccess.removeServerDictData(guildId, target);
+    }
+
+    /**
+     * 全てのグローバル辞書データを取得
+     *
+     * @return 全てのグローバル辞書データのリスト
+     */
+    @NotNull
+    @Unmodifiable
+    public List<DictData> getAllGlobalDictData() {
+        return saveDataAccess.getAllGlobalDictData();
+    }
+
+    /**
+     * グローバル辞書データを取得
+     *
+     * @param target 対象の文字列
+     * @return グローバル辞書データ
+     */
+    @Nullable
+    public DictData getGlobalDictData(@NotNull String target) {
+        return saveDataAccess.getGlobalDictData(target);
+    }
+
+    /**
+     * グローバル辞書データを追加
+     *
+     * @param target 対象の文字列
+     * @param read   読み
+     */
+    public void addGlobalDictData(@NotNull String target, @NotNull String read) {
+        saveDataAccess.addGlobalDictData(target, read);
+    }
+
+    /**
+     * グローバル辞書データを削除
+     *
+     * @param target 対象の文字列
+     */
+    public void removeGlobalDictData(@NotNull String target) {
+        saveDataAccess.removeGlobalDictData(target);
+    }
+
+    /**
+     * 全ての読み上げ拒否ユーザを取得
+     *
+     * @param guildId サーバーID
+     * @return 全ての読み上げを拒否されたユーザのIDリスト
+     */
+    @NotNull
+    @Unmodifiable
+    public List<Long> getAllDenyUser(long guildId) {
+        return saveDataAccess.getAllDenyUser(guildId);
     }
 }

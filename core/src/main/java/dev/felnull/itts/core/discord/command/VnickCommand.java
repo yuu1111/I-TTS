@@ -1,8 +1,6 @@
 package dev.felnull.itts.core.discord.command;
 
-import dev.felnull.itts.core.savedata.SaveDataManager;
-import dev.felnull.itts.core.savedata.legacy.LegacySaveDataLayer;
-import dev.felnull.itts.core.savedata.legacy.LegacyServerUserData;
+import dev.felnull.itts.core.savedata.ServerUserData;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.interactions.commands.OptionMapping;
@@ -43,8 +41,7 @@ public class VnickCommand extends BaseCommand {
         Guild guild = Objects.requireNonNull(event.getGuild());
         String name = event.getOption("name", OptionMapping::getAsString);
 
-        LegacySaveDataLayer legacySaveDataLayer = SaveDataManager.getInstance().getLegacySaveDataLayer();
-        LegacyServerUserData sud = legacySaveDataLayer.getServerUserData(guild.getIdLong(), event.getUser().getIdLong());
+        ServerUserData sud = getSaveDataManager().getServerUserData(guild.getIdLong(), event.getUser().getIdLong());
 
         if ("reset".equals(name)) {
             sud.setNickName(null);

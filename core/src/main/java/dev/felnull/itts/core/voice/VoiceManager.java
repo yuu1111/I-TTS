@@ -2,9 +2,7 @@ package dev.felnull.itts.core.voice;
 
 import dev.felnull.itts.core.ITTSBaseManager;
 import dev.felnull.itts.core.savedata.SaveDataManager;
-import dev.felnull.itts.core.savedata.legacy.LegacySaveDataLayer;
-import dev.felnull.itts.core.savedata.legacy.LegacyServerUserData;
-import dev.felnull.itts.core.voice.coeiroink.CoeiroinkManager;
+import dev.felnull.itts.core.savedata.ServerUserData;
 import dev.felnull.itts.core.voice.voicetext.VoiceTextManager;
 import dev.felnull.itts.core.voice.voicevox.VoicevoxManager;
 import org.jetbrains.annotations.NotNull;
@@ -38,8 +36,8 @@ public class VoiceManager implements ITTSBaseManager {
     /**
      * COEIROINKの管理
      */
-    private final CoeiroinkManager coeiroinkManager =
-            new CoeiroinkManager("coeiroink", () ->
+    private final VoicevoxManager coeiroinkManager =
+            new VoicevoxManager("coeiroink", () ->
                     getConfigManager().getConfig().getCoeirolnkConfig().getApiUrls(), () -> getConfigManager().getConfig().getCoeirolnkConfig());
 
     /**
@@ -82,7 +80,9 @@ public class VoiceManager implements ITTSBaseManager {
         return voicevoxManager;
     }
 
-    public CoeiroinkManager getCoeiroinkManager() {return coeiroinkManager;}
+    public VoicevoxManager getCoeiroinkManager() {
+        return coeiroinkManager;
+    }
 
     public VoicevoxManager getSharevoxManager() {
         return sharevoxManager;
@@ -138,8 +138,7 @@ public class VoiceManager implements ITTSBaseManager {
      */
     @Nullable
     public VoiceType getDefaultVoiceType(long guildId) {
-        LegacySaveDataLayer legacySaveDataLayer = SaveDataManager.getInstance().getLegacySaveDataLayer();
-        String defaultVt = legacySaveDataLayer.getServerData(guildId).getDefaultVoiceType();
+        String defaultVt = getSaveDataManager().getServerData(guildId).getDefaultVoiceType();
 
         if (defaultVt == null) {
             return getDefaultVoiceType();
@@ -157,8 +156,8 @@ public class VoiceManager implements ITTSBaseManager {
      */
     @Nullable
     public VoiceType getVoiceType(long guildId, long userId) {
-        LegacySaveDataLayer legacySaveDataLayer = SaveDataManager.getInstance().getLegacySaveDataLayer();
-        LegacyServerUserData serverUserData = legacySaveDataLayer.getServerUserData(guildId, userId);
+        SaveDataManager sdm = getSaveDataManager();
+        ServerUserData serverUserData = sdm.getServerUserData(guildId, userId);
         Optional<VoiceType> vt = getVoiceType(serverUserData.getVoiceType());
 
         return vt.orElseGet(() -> getDefaultVoiceType(guildId));

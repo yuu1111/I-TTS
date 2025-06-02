@@ -1,9 +1,8 @@
 package dev.felnull.itts.core.util;
 
-import dev.felnull.itts.core.savedata.SaveDataManager;
-import dev.felnull.itts.core.savedata.legacy.LegacySaveDataLayer;
-import dev.felnull.itts.core.savedata.legacy.LegacyServerData;
-import dev.felnull.itts.core.savedata.legacy.LegacyServerUserData;
+import dev.felnull.itts.core.ITTSRuntime;
+import dev.felnull.itts.core.savedata.ServerData;
+import dev.felnull.itts.core.savedata.ServerUserData;
 import dev.felnull.itts.core.voice.Voice;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.GuildVoiceState;
@@ -41,8 +40,7 @@ public final class TTSUtils {
             return getTTSName(voice, member);
         }
 
-        LegacySaveDataLayer legacySaveDataLayer = SaveDataManager.getInstance().getLegacySaveDataLayer();
-        LegacyServerUserData sud = legacySaveDataLayer.getServerUserData(guild.getIdLong(), user.getIdLong());
+        ServerUserData sud = ITTSRuntime.getInstance().getSaveDataManager().getServerUserData(guild.getIdLong(), user.getIdLong());
         String nick = sud.getNickName();
 
         String ret = Objects.requireNonNullElseGet(nick, () -> DiscordUtils.getName(guild, user));
@@ -63,8 +61,7 @@ public final class TTSUtils {
         Objects.requireNonNull(member);
 
         User user = member.getUser();
-        LegacySaveDataLayer legacySaveDataLayer = SaveDataManager.getInstance().getLegacySaveDataLayer();
-        LegacyServerUserData sud = legacySaveDataLayer.getServerUserData(member.getGuild().getIdLong(), user.getIdLong());
+        ServerUserData sud = ITTSRuntime.getInstance().getSaveDataManager().getServerUserData(member.getGuild().getIdLong(), user.getIdLong());
         String nick = sud.getNickName();
 
         String ret = Objects.requireNonNullElseGet(nick, member::getEffectiveName);
@@ -83,8 +80,7 @@ public final class TTSUtils {
      * @return 読み上げてるテキスト
      */
     public static String roundText(Voice voice, long guildId, String text, boolean name) {
-        LegacySaveDataLayer legacySaveDataLayer = SaveDataManager.getInstance().getLegacySaveDataLayer();
-        LegacyServerData sud = legacySaveDataLayer.getServerData(guildId);
+        ServerData sud = ITTSRuntime.getInstance().getSaveDataManager().getServerData(guildId);
         int max = name ? sud.getNameReadLimit() : Math.min(sud.getReadLimit(), voice.getReadLimit());
 
         if (text.length() <= max) {

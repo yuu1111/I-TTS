@@ -5,6 +5,7 @@ import dev.felnull.itts.core.cache.CacheManager;
 import dev.felnull.itts.core.config.ConfigManager;
 import dev.felnull.itts.core.dict.DictionaryManager;
 import dev.felnull.itts.core.discord.Bot;
+import dev.felnull.itts.core.savedata.SaveDataManager;
 import dev.felnull.itts.core.tts.TTSManager;
 import dev.felnull.itts.core.voice.VoiceManager;
 import org.apache.logging.log4j.Logger;
@@ -61,6 +62,10 @@ public interface ITTSRuntimeUse {
 
     default DictionaryManager getDictionaryManager() {
         return getITTSRuntime().getDictionaryManager();
+    }
+
+    default SaveDataManager getSaveDataManager() {
+        return getITTSRuntime().getSaveDataManager();
     }
 
     default VoiceManager getVoiceManager() {

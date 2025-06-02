@@ -115,6 +115,11 @@ public class ITTSRuntime {
     private final CacheManager cacheManager;
 
     /**
+     * セーブデータマネージャー
+     */
+    private final SaveDataManager saveDataManager;
+
+    /**
      * DiscordのBOT関係
      */
     private final Bot bot;
@@ -146,9 +151,10 @@ public class ITTSRuntime {
 
         this.bot = new Bot();
         this.configManager = new ConfigManager(runtimeContext.getConfigContext());
+        this.saveDataManager = new SaveDataManager(runtimeContext.getSaveDataAccess());
         this.cacheManager = new CacheManager(runtimeContext.getGlobalCacheAccessFactory());
 
-        this.managers = ImmutableList.of(configManager, voiceManager);
+        this.managers = ImmutableList.of(configManager, saveDataManager, voiceManager);
     }
 
     /**
@@ -197,8 +203,6 @@ public class ITTSRuntime {
         managers.stream()
                 .map(ITTSBaseManager::init)
                 .forEach(CompletableFuture::join);
-
-        SaveDataManager.getInstance().init();
 
         logger.info("Setup complete");
 
@@ -251,6 +255,10 @@ public class ITTSRuntime {
 
     public VoiceAudioManager getVoiceAudioManager() {
         return voiceAudioManager;
+    }
+
+    public SaveDataManager getSaveDataManager() {
+        return saveDataManager;
     }
 
     public VoiceManager getVoiceManager() {
