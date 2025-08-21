@@ -23,8 +23,11 @@ dependencies {
     api("com.ibm.icu:icu4j:72.1")
     api("com.atilika.kuromoji:kuromoji-ipadic:0.9.0")
 
-
     api("org.jetbrains:annotations:23.0.0")
+    
+    // テスト依存関係
+    testImplementation("org.junit.jupiter:junit-jupiter-api:5.9.2")
+    testRuntimeOnly("org.junit.jupiter:junit-jupiter-engine:5.9.2")
 }
 
 tasks.getByName<Test>("test") {

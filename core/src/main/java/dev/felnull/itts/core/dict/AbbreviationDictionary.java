@@ -25,7 +25,11 @@ public class AbbreviationDictionary implements Dictionary {
      */
     private final RegexUtil regexUtil = new RegexUtil()
             .addOption(1, "ユーアルエルショウリャク", s -> {
-                Pattern pattern = Pattern.compile("https?://[\\w!?/+\\-_~=;.,*&@#$%()'\\[\\]]+");
+                // URLパターン（RegexUtilの保護機能により全体がマッチする）
+                Pattern pattern = Pattern.compile(
+                    "(?:https?|ftp)://[^\\s<>\"{}|\\\\^`\u3000-\u303f\uff00-\uffef]+" +  // 日本語記号と全角記号を除外
+                    "(?<![.,;:!?\u3001\u3002\u300d\u300f）])"  // 末尾の句読点を除外（括弧は許可）
+                );
                 Matcher matcher = pattern.matcher(s);
                 return matcher.find();
             })
@@ -59,6 +63,7 @@ public class AbbreviationDictionary implements Dictionary {
 
     @Override
     public @NotNull String apply(@NotNull String text, long guildId) {
+        // コードブロックを最初に置換
         text = CODE_BLOCK_REGEX.matcher(text).replaceAll("コードブロックショウリャク");
         return regexUtil.replaceText(text);
     }
