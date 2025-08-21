@@ -146,7 +146,7 @@ Checkstyle設定（`config/checkstyle/checkstyle.xml`）：
 - 最大行長：170文字（警告レベル）
 - タブ文字禁止
 - package-info.javaにJavadoc必須
-- FelNull開発用規約準拠
+- FelNull開発用規約準拠(https://github.com/TeamFelNull/felnull-development-rule/blob/main/Java%E9%96%8B%E7%99%BA%E8%A6%8F%E7%B4%84.md)
 
 ## Windows開発環境の注意事項
 

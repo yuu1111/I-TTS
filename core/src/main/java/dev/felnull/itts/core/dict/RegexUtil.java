@@ -14,36 +14,6 @@ public class RegexUtil {
 
     /** オプション保持用のリスト */
     private final List<RegexOption> optionList = new ArrayList<>();
-    
-    /** URL検出用パターン */
-    private static final Pattern URL_PATTERN = Pattern.compile(
-        "(?:https?|ftp)://[^\\s<>\"{}|\\\\^`\u3000-\u303f\uff00-\uffef]+" +  // 日本語記号と全角記号を除外
-        "(?<![.,;:!?\u3001\u3002\u300d\u300f）])"  // 末尾の句読点を除外（括弧は許可）
-    );
-
-    /** 保護された文字列（URLなど）と通常テキストを分離 */
-    private List<TextSegment> extractProtectedSegments(String text) {
-        List<TextSegment> segments = new ArrayList<>();
-        Matcher urlMatcher = URL_PATTERN.matcher(text);
-        int lastEnd = 0;
-        
-        while (urlMatcher.find()) {
-            // URL前のテキスト
-            if (lastEnd < urlMatcher.start()) {
-                segments.add(new TextSegment(text.substring(lastEnd, urlMatcher.start()), false));
-            }
-            // URL自体（保護対象）
-            segments.add(new TextSegment(urlMatcher.group(), true));
-            lastEnd = urlMatcher.end();
-        }
-        
-        // 最後の部分
-        if (lastEnd < text.length()) {
-            segments.add(new TextSegment(text.substring(lastEnd), false));
-        }
-        
-        return segments;
-    }
 
     /** 日本語と英語をわけます */
     private List<String> splitJapaneseEnglish(String text) {
@@ -97,56 +67,24 @@ public class RegexUtil {
      * @return 置き換え済みテキスト
      */
     public String replaceText(String text) {
-        // URLを含むセグメントに分割
-        List<TextSegment> segments = extractProtectedSegments(text);
+        List<String> texts = splitJapaneseEnglish(text);
         StringBuilder result = new StringBuilder();
         
-        for (TextSegment segment : segments) {
-            if (segment.isProtected) {
-                // URLは全体を一つの単位として処理
-                boolean replaced = false;
-                for (RegexOption ops : optionList.stream().sorted(Comparator.comparingInt(o -> o.priority)).toList()) {
-                    if (ops.testFunction.apply(segment.text)) {
-                        result.append(ops.replacedText);
-                        replaced = true;
-                        break;
-                    }
+        for (String txt : texts) {
+            boolean replaced = false;
+            for (RegexOption ops : optionList.stream().sorted(Comparator.comparingInt(o -> o.priority)).toList()) {
+                if (ops.testFunction.apply(txt)) {
+                    result.append(ops.replacedText);
+                    replaced = true;
+                    break;
                 }
-                if (!replaced) {
-                    result.append(segment.text);
-                }
-            } else {
-                // 通常のテキストは従来通り分割して処理
-                List<String> texts = splitJapaneseEnglish(segment.text);
-                for (String txt : texts) {
-                    boolean replaced = false;
-                    for (RegexOption ops : optionList.stream().sorted(Comparator.comparingInt(o -> o.priority)).toList()) {
-                        if (ops.testFunction.apply(txt)) {
-                            result.append(ops.replacedText);
-                            replaced = true;
-                            break;
-                        }
-                    }
-                    if (!replaced) {
-                        result.append(txt);
-                    }
-                }
+            }
+            if (!replaced) {
+                result.append(txt);
             }
         }
         
         return result.toString();
-    }
-
-
-    /** テキストセグメント（保護フラグ付き） */
-    private static class TextSegment {
-        final String text;
-        final boolean isProtected;
-        
-        TextSegment(String text, boolean isProtected) {
-            this.text = text;
-            this.isProtected = isProtected;
-        }
     }
 
     /** オプション定義用クラス
