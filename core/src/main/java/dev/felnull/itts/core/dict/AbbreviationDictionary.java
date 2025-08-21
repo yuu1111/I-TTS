@@ -4,6 +4,7 @@ import com.google.common.collect.ImmutableMap;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
 
+import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -16,24 +17,20 @@ import java.util.regex.Pattern;
 public class AbbreviationDictionary implements Dictionary {
 
     /**
-     * コードブロックの正規表現
+     * インラインコードの正規表現（バッククォート1つ）
      */
-    private static final Pattern CODE_BLOCK_REGEX = Pattern.compile("```(.|\n)*```");
+    private static final Pattern INLINE_CODE_REGEX = Pattern.compile("`[^`\n]+`");
+    
+    /**
+     * コードブロックの正規表現（非貪欲マッチング）
+     */
+    private static final Pattern CODE_BLOCK_REGEX = Pattern.compile("```[\\s\\S]*?```");
 
     /**
      * 正規表現関係
      */
     private final RegexUtil regexUtil = new RegexUtil()
-            .addOption(1, "ユーアルエルショウリャク", s -> {
-                // URLパターン（RegexUtilの保護機能により全体がマッチする）
-                Pattern pattern = Pattern.compile(
-                    "(?:https?|ftp)://[^\\s<>\"{}|\\\\^`\u3000-\u303f\uff00-\uffef]+" +  // 日本語記号と全角記号を除外
-                    "(?<![.,;:!?\u3001\u3002\u300d\u300f）])"  // 末尾の句読点を除外（括弧は許可）
-                );
-                Matcher matcher = pattern.matcher(s);
-                return matcher.find();
-            })
-            .addOption(1, "ドメインショウリャク", s -> {
+            .addOption(2, "ドメインショウリャク", s -> {
                 Pattern pattern = Pattern.compile("^([a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\\.)+[a-zA-Z]{2,}$");
                 Matcher matcher = pattern.matcher(s);
                 return matcher.find();
@@ -61,11 +58,43 @@ public class AbbreviationDictionary implements Dictionary {
             });
 
 
+    /** URLパターン（優先度最高で検出） */
+    private static final Pattern URL_PATTERN = Pattern.compile(
+        "(?:https?|ftp)://[^\\s\u3000<>\"{}|\\\\^`]+" +
+        "(?<![.,;:!?\u3001\u3002\u300d\u300f）])"
+    );
+
     @Override
     public @NotNull String apply(@NotNull String text, long guildId) {
-        // コードブロックを最初に置換
+        // インラインコードを保護（変換しない）
+        Map<String, String> inlineCodePlaceholders = new HashMap<>();
+        Matcher inlineMatcher = INLINE_CODE_REGEX.matcher(text);
+        int inlineIndex = 0;
+        StringBuffer sb = new StringBuffer();
+        while (inlineMatcher.find()) {
+            String placeholder = "__INLINE_CODE_" + inlineIndex + "__";
+            inlineCodePlaceholders.put(placeholder, inlineMatcher.group());
+            inlineMatcher.appendReplacement(sb, placeholder);
+            inlineIndex++;
+        }
+        inlineMatcher.appendTail(sb);
+        text = sb.toString();
+        
+        // コードブロックを置換
         text = CODE_BLOCK_REGEX.matcher(text).replaceAll("コードブロックショウリャク");
-        return regexUtil.replaceText(text);
+        
+        // URLを先に検出して置換（RegexUtilで分割される前に処理）
+        text = URL_PATTERN.matcher(text).replaceAll("ユーアルエルショウリャク");
+        
+        // 他の変換を実行
+        text = regexUtil.replaceText(text);
+        
+        // インラインコードを元に戻す
+        for (Map.Entry<String, String> entry : inlineCodePlaceholders.entrySet()) {
+            text = text.replace(entry.getKey(), entry.getValue());
+        }
+        
+        return text;
     }
 
     @Override
