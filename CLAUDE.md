@@ -147,3 +147,47 @@ Checkstyle設定（`config/checkstyle/checkstyle.xml`）：
 - タブ文字禁止
 - package-info.javaにJavadoc必須
 - FelNull開発用規約準拠
+
+## Windows開発環境の注意事項
+
+### 基本原則
+- **PowerShell**: `powershell`ではなく`pwsh`（PowerShell Core）を使用し、常に`-Encoding UTF8`を指定
+- **パス処理**: ハードコーディングされたパス区切り文字（`\`や`/`）を避け、Javaの`Path`や`File.separator`を使用
+- **エンコーディング**: すべてのファイルをUTF-8（BOMなし）で統一、`StandardCharsets.UTF_8`を明示的に指定
+- **ビルドツール**: Gradleラッパー（`gradlew.bat`）を使用してクロスプラットフォーム対応
+
+### Git設定（必須）
+```bash
+git config core.autocrlf true      # 改行コード自動変換
+git config core.quotepath false    # 日本語ファイル名対応
+```
+
+### Windows固有のGradleコマンド
+```bash
+# Windows環境でのビルド
+gradlew.bat shadowJar
+
+# Windows環境でのテスト
+gradlew.bat test
+
+# Windows環境でのCheckstyle
+gradlew.bat checkstyle
+```
+
+### よくある問題への対処
+
+| 症状 | 対処法 |
+|------|--------|
+| 日本語の文字化け | PowerShell Coreと`-Encoding UTF8`を使用、JavaのVMオプションに`-Dfile.encoding=UTF-8`を追加 |
+| パスが見つからない | `Paths.get()`や`File.separator`を使用、絶対パスは`Path.toAbsolutePath()`で取得 |
+| Gradleビルドエラー | `gradlew.bat`を使用、`JAVA_HOME`環境変数が正しく設定されているか確認 |
+| ファイルパス長エラー | Windows Long Path Supportを有効化（グループポリシーで設定） |
+| VOICEVOX接続エラー | Windows Defenderやファイアウォールでポートがブロックされていないか確認 |
+| 文字コード問題 | IntelliJ IDEAのFile Encodings設定をUTF-8に統一 |
+
+### 重要な注意点
+- Windows環境では常にクロスプラットフォーム対応を意識してコードを書く
+- ファイル操作時は必ず`StandardCharsets.UTF_8`でエンコーディングを明示的に指定
+- パス操作は`java.nio.file.Path`と`java.nio.file.Paths`を使用
+- 外部プロセス実行時は`ProcessBuilder`を使用してプラットフォーム差異を吸収
+- JSON5ファイル（`config.json5`）の編集時はBOM無しUTF-8対応エディタを使用
