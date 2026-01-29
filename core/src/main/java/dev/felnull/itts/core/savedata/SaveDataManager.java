@@ -188,6 +188,7 @@ public class SaveDataManager {
 
                     if (throwable == null) {
                         repository.set(dataRepository);
+                        errorCounter.set(0);
                         LOGGER.info("Repository was reloaded");
                     } else {
                         LOGGER.error("Failed to load repository", throwable);
