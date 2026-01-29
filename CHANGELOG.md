@@ -9,12 +9,14 @@
 - COEIROINKの新APIに対応
 ### Changed
 - vnickコマンドで空引数時にリセット可能に
+- Java25に移行
 ### Deprecated
 
 ### Removed
 
 ### Fixed
 - 画像のみのメッセージで読み上げエラーが発生する問題を修正
+- denyコマンドの不具合を修正
 ### Security
 
 ## [2.0.2] - 2025-12-14
