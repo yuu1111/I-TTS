@@ -139,7 +139,7 @@ public class LegacyMigrator {
                     .forEach((entry) -> {
                         long userId;
                         try {
-                            userId = Long.parseLong(name);
+                            userId = Long.parseLong(entry.getKey());
                         } catch (NumberFormatException e) {
                             LOGGER.error("Invalid data name {}", file.getName());
                             return;
