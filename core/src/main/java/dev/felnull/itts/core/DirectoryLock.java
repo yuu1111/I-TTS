@@ -41,14 +41,19 @@ public class DirectoryLock implements ITTSRuntimeUse {
             fileOutputStream.write(new byte[]{0});
             FileChannel fileChannel = fileOutputStream.getChannel();
             fileLock = fileChannel.tryLock();
+            if (fileLock == null) {
+                throw new RuntimeException("Failed to lock directory, directory may be locked by another process");
+            }
         } catch (IOException e) {
-            throw new RuntimeException("Failed to lock directory, directory may be locked by another process", e);
+            throw new RuntimeException("Failed to lock directory", e);
         }
 
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
-                fileLock.release();
+                if (fileLock != null) {
+                    fileLock.release();
+                }
             } catch (Exception ignored) {
                 // ファイルロックの解放に失敗した場合は諦める
             }
