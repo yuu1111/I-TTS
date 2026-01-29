@@ -23,7 +23,7 @@ VOICEVOXとCOEIROINK、SHAREVOXは自分でエンジンを起動しておく必�
 
 ## 動作環境
 
-- Java17
+- Java25
 - [LavaPlayer](https://github.com/walkyst/lavaplayer-fork)と[JDA](https://github.com/DV8FromTheWorld/JDA)が対応しているプラットフォーム
 
 Windows(amd64)とLinux(amd64,arm64)で動作確認済み。  
@@ -40,7 +40,7 @@ java -jar itts-selfhost-2.0.0.jar
 または
 
 ```
-java17のディレクトリ\bin\java.exe -jar itts-selfhost-2.0.0.jar
+java25のディレクトリ\bin\java.exe -jar itts-selfhost-2.0.0.jar
 ```
 
 初回起動時はコンフィグが起動ディレクトリ内に生成され停止します。  
