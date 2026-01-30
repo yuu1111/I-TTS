@@ -15,6 +15,8 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.charset.StandardCharsets;
+import java.time.Duration;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -80,6 +82,7 @@ public class VoiceTextManager implements ITTSRuntimeUse {
                 .header("Authorization", basic)
                 .header("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
                 .POST(HttpRequest.BodyPublishers.ofString(String.format("text=%s&speaker=%s", text, speaker.getId())))
+                .timeout(Duration.of(10, ChronoUnit.SECONDS))
                 .build();
         HttpResponse<InputStream> res = hc.send(request, HttpResponse.BodyHandlers.ofInputStream());
 
