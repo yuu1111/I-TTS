@@ -45,11 +45,18 @@ public class ReconnectCommand extends BaseCommand {
 
             audioManager.closeAudioConnection();
 
+            long targetChannelId = connectedChannel.getIdLong();
             CompletableFuture.runAsync(() -> {
                 try {
                     Thread.sleep(300);
                 } catch (InterruptedException ignored) {
                     Thread.currentThread().interrupt();
+                    return;
+                }
+
+                AudioChannelUnion currentChannel = audioManager.getConnectedChannel();
+                if (currentChannel != null && currentChannel.getIdLong() != targetChannelId) {
+                    return;
                 }
 
                 getTTSManager().setReadAroundChannel(event.getGuild(), event.getChannel());
