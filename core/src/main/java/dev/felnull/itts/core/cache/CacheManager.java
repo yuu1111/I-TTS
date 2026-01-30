@@ -78,16 +78,17 @@ public class CacheManager implements ITTSRuntimeUse {
 
                     if (data == null) {
                         gca.lock(key);
-
-                        data = gca.get(key);
-                        if (data == null) {
-                            try (var in = new BufferedInputStream(loadOpener.openStream());) {
-                                data = in.readAllBytes();
+                        try {
+                            data = gca.get(key);
+                            if (data == null) {
+                                try (var in = new BufferedInputStream(loadOpener.openStream());) {
+                                    data = in.readAllBytes();
+                                }
+                                gca.set(key, data);
                             }
-                            gca.set(key, data);
+                        } finally {
+                            gca.unlock(key);
                         }
-
-                        gca.unlock(key);
                     }
 
                     Files.write(lcFile.toPath(), data);
