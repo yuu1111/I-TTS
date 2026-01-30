@@ -13,10 +13,10 @@ import org.jetbrains.annotations.Unmodifiable;
 
 import java.sql.Connection;
 import java.sql.SQLException;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
@@ -150,7 +150,7 @@ public final class DataRepositoryImpl implements DataRepository {
     /**
      * 登録済みエラーリスナー
      */
-    private final Set<RepoErrorListener> errorListeners = new HashSet<>();
+    private final Set<RepoErrorListener> errorListeners = ConcurrentHashMap.newKeySet();
 
     /**
      * 破棄済みかどうか
