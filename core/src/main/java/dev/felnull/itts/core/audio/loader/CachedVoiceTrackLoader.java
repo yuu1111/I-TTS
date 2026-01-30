@@ -77,7 +77,10 @@ public class CachedVoiceTrackLoader implements VoiceTrackLoader, ITTSRuntimeUse 
                 public void loadFailed(FriendlyException exception) {
                 }
             }).get();
-        } catch (InterruptedException | ExecutionException e) {
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new RuntimeException(e);
+        } catch (ExecutionException e) {
             throw new RuntimeException(e);
         }
 
