@@ -1,0 +1,7 @@
+services:
+  itts:
+    build: .
+    container_name: itts-bot
+    volumes:
+      - ./docker-data:/home/container
+    restart: unless-stopped
