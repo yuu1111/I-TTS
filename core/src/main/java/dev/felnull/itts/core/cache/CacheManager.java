@@ -63,54 +63,100 @@ public class CacheManager implements ITTSRuntimeUse {
      * @return キャッシュエントリのCompletableFuture
      */
     public CompletableFuture<CacheUseEntry> loadOrRestore(@NotNull HashCode key, @NotNull StreamOpener loadOpener) {
-        return localCaches.computeIfAbsent(key, ky -> createLocalCache(ky, loadOpener))
-                .thenApplyAsync(LocalCache::restore, getAsyncExecutor());
+        return localCaches.computeIfAbsent(key, ky -> {
+            CompletableFuture<LocalCache> future = createLocalCache(ky, loadOpener);
+            future.exceptionally(ex -> {
+                localCaches.remove(ky, future);
+                return null;
+            });
+            return future;
+        }).thenApplyAsync(LocalCache::restore, getAsyncExecutor());
     }
 
+    /**
+     * ローカルキャッシュを非同期で生成する
+     *
+     * @param key        キャッシュキー
+     * @param loadOpener ストリーム生成
+     * @return ローカルキャッシュのCompletableFuture
+     */
     private CompletableFuture<LocalCache> createLocalCache(HashCode key, StreamOpener loadOpener) {
-        CompletableFuture<File> cf;
         File lcFile = getLocalCacheFile(key);
 
+        CompletableFuture<File> cf;
         if (globalCacheAccessFactory != null) {
-            cf = CompletableFuture.supplyAsync(() -> {
-                try (var gca = globalCacheAccessFactory.get()) {
-                    byte[] data = gca.get(key);
-
-                    if (data == null) {
-                        gca.lock(key);
-
-                        data = gca.get(key);
-                        if (data == null) {
-                            try (var in = new BufferedInputStream(loadOpener.openStream());) {
-                                data = in.readAllBytes();
-                            }
-                            gca.set(key, data);
-                        }
-
-                        gca.unlock(key);
-                    }
-
-                    Files.write(lcFile.toPath(), data);
-
-                    return lcFile;
-                } catch (Exception ex) {
-                    throw new RuntimeException(ex);
-                }
-            }, getAsyncExecutor());
-
+            cf = CompletableFuture.supplyAsync(() -> loadViaGlobalCache(key, loadOpener, lcFile), getAsyncExecutor());
         } else {
-            cf = CompletableFuture.supplyAsync(() -> {
-
-                try (var in = loadOpener.openStream(); var out = new FileOutputStream(lcFile)) {
-                    FNDataUtil.inputToOutputBuff(in, out);
-                } catch (IOException | InterruptedException e) {
-                    throw new RuntimeException(e);
-                }
-
-                return lcFile;
-            }, getAsyncExecutor());
+            cf = CompletableFuture.supplyAsync(() -> loadDirectly(loadOpener, lcFile), getAsyncExecutor());
         }
-        return cf.thenApplyAsync((file) -> new LocalCache(key, file), getAsyncExecutor());
+
+        return cf.thenApply(file -> new LocalCache(key, file));
+    }
+
+    /**
+     * グローバルキャッシュ経由でデータを取得し、ローカルファイルに書き込む
+     *
+     * @param key        キャッシュキー
+     * @param loadOpener ストリーム生成
+     * @param lcFile     ローカルキャッシュファイル
+     * @return 書き込み済みのローカルキャッシュファイル
+     */
+    private File loadViaGlobalCache(HashCode key, StreamOpener loadOpener, File lcFile) {
+        try (GlobalCacheAccess gca = globalCacheAccessFactory.get()) {
+            byte[] data = gca.get(key);
+
+            if (data == null) {
+                data = loadAndCacheWithLock(gca, key, loadOpener);
+            }
+
+            Files.write(lcFile.toPath(), data);
+            return lcFile;
+        } catch (Exception ex) {
+            throw new RuntimeException(ex);
+        }
+    }
+
+    /**
+     * ロックを取得してダブルチェック後、データを読み込みグローバルキャッシュに保存する
+     *
+     * @param gca        グローバルキャッシュアクセス
+     * @param key        キャッシュキー
+     * @param loadOpener ストリーム生成
+     * @return キャッシュデータ
+     * @throws IOException          IO例外
+     * @throws InterruptedException 割り込み例外
+     */
+    private byte[] loadAndCacheWithLock(GlobalCacheAccess gca, HashCode key, StreamOpener loadOpener)
+            throws IOException, InterruptedException {
+        gca.lock(key);
+        try {
+            byte[] data = gca.get(key);
+            if (data == null) {
+                try (BufferedInputStream in = new BufferedInputStream(loadOpener.openStream())) {
+                    data = in.readAllBytes();
+                }
+                gca.set(key, data);
+            }
+            return data;
+        } finally {
+            gca.unlock(key);
+        }
+    }
+
+    /**
+     * ストリームからローカルファイルに直接書き込む
+     *
+     * @param loadOpener ストリーム生成
+     * @param lcFile     ローカルキャッシュファイル
+     * @return 書き込み済みのローカルキャッシュファイル
+     */
+    private File loadDirectly(StreamOpener loadOpener, File lcFile) {
+        try (var in = loadOpener.openStream(); var out = new FileOutputStream(lcFile)) {
+            FNDataUtil.inputToOutputBuff(in, out);
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+        return lcFile;
     }
 
     private File getLocalCacheFile(HashCode hashCode) {

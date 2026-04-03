@@ -89,7 +89,7 @@ public class LocalCache implements ITTSRuntimeUse {
      */
     protected void dispose() {
         destroy.set(true);
-        if (file.exists() && file.delete()) {
+        if (file.exists() && !file.delete()) {
             throw new RuntimeException("Failed to delete file");
         }
     }
@@ -107,16 +107,15 @@ public class LocalCache implements ITTSRuntimeUse {
             return;
         }
 
-        long now = System.currentTimeMillis();
-        long lastTime = lastUseTime.get();
-        long eqTime = now - lastTime;
+        long cacheTime = getCacheTime();
+        long eqTime = System.currentTimeMillis() - lastUseTime.get();
 
-        if (eqTime >= getCacheTime()) {
+        if (eqTime >= cacheTime) {
             getCacheManager().disposeCache(hashCode);
             return;
         }
 
-        scheduleCheckTimer(this::check, getCacheTime() - eqTime + 300L);
+        scheduleCheckTimer(this::check, cacheTime - eqTime + 300L);
     }
 
     private long getCacheTime() {
