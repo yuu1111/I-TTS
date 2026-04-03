@@ -14,7 +14,6 @@ import org.jetbrains.annotations.Range;
 import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
  *
@@ -47,11 +46,11 @@ public record ConfigImpl(
             String botToken = Json5Utils.getStringOrElse(json5, "bot_token", DEFAULT_BOT_TOKEN);
             int themeColor = json5.getInt("theme_color", DEFAULT_THEME_COLOR);
             long cacheTime = json5.getLong("cache_time", DEFAULT_CACHE_TIME);
-            VoiceTextConfig voiceTextConfig = VoiceTextConfigImpl.fromJson(Optional.ofNullable(json5.getObject("voice_text")).orElseGet(JsonObject::new));
-            VoicevoxConfig voicevoxConfig = VoicevoxConfigImpl.fromJson(Optional.ofNullable(json5.getObject("voicevox")).orElseGet(JsonObject::new));
-            VoicevoxConfig coeirolnkConfig = VoicevoxConfigImpl.fromJson(Optional.ofNullable(json5.getObject("coeirolnk")).orElseGet(JsonObject::new));
-            VoicevoxConfig sharevoxConfig = VoicevoxConfigImpl.fromJson(Optional.ofNullable(json5.getObject("sharevox")).orElseGet(JsonObject::new));
-            DataBaseConfig dataBaseConfig = DataBaseConfigImpl.fromJson(Optional.ofNullable(json5.getObject("data_base")).orElseGet(JsonObject::new));
+            VoiceTextConfig voiceTextConfig = VoiceTextConfigImpl.fromJson(Json5Utils.getObjectOrEmpty(json5,"voice_text"));
+            VoicevoxConfig voicevoxConfig = VoicevoxConfigImpl.fromJson(Json5Utils.getObjectOrEmpty(json5,"voicevox"));
+            VoicevoxConfig coeirolnkConfig = VoicevoxConfigImpl.fromJson(Json5Utils.getObjectOrEmpty(json5,"coeirolnk"));
+            VoicevoxConfig sharevoxConfig = VoicevoxConfigImpl.fromJson(Json5Utils.getObjectOrEmpty(json5,"sharevox"));
+            DataBaseConfig dataBaseConfig = DataBaseConfigImpl.fromJson(Json5Utils.getObjectOrEmpty(json5,"data_base"));
 
             return new ConfigImpl(
                     botToken,

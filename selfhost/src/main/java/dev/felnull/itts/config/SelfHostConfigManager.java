@@ -55,12 +55,24 @@ public class SelfHostConfigManager implements ConfigContext {
     private static final File OLD_CONFIG_FOLDER = new File("./old_config");
 
     /**
+     * バックアップファイル名用の日時フォーマッター
+     */
+    private static final DateTimeFormatter BACKUP_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH.mm.ss");
+
+    /**
      * コンフィグローダー
      */
     private final Map<Integer, ConfigLoader<?>> configLoaders = ImmutableMap.of(
             0, ConfigV0.LOADER,
             1, ConfigImpl.LOADER
     );
+
+    /**
+     * 最新のコンフィグバージョン番号
+     */
+    private final int latestVersionNum = configLoaders.keySet().stream()
+            .max(Integer::compareTo)
+            .orElseThrow();
 
     /**
      * インスタンス取得
@@ -74,10 +86,6 @@ public class SelfHostConfigManager implements ConfigContext {
     @Override
     public @Nullable Config loadConfig() {
         LOGGER.info("Config load start");
-
-        int latestVersionNum = configLoaders.keySet().stream()
-                .max(Integer::compareTo)
-                .orElseThrow();
 
         // コンフィグファイルが存在しない場合
         if (!CONFIG_FILE.exists()) {
@@ -103,22 +111,25 @@ public class SelfHostConfigManager implements ConfigContext {
             // バージョンが古い場合は移行して読み込む
             LOGGER.info("Migrate config: {} → {}", configVersionNum, latestVersionNum);
 
-            Object migrateConfig = null;
-            for (int i = configVersionNum; i <= latestVersionNum; i++) {
+            ConfigLoader<?> initialLoader = configLoaders.get(configVersionNum);
+            if (initialLoader == null) {
+                throw new IllegalStateException("No loader for config version: " + configVersionNum);
+            }
+            Object migrateConfig = initialLoader.load(configJo);
+
+            for (int i = configVersionNum + 1; i <= latestVersionNum; i++) {
                 ConfigLoader<?> loader = configLoaders.get(i);
-                if (migrateConfig == null) {
-                    migrateConfig = loader.load(configJo);
-                } else {
-                    migrateConfig = loader.migrate(migrateConfig);
+                if (loader == null) {
+                    throw new IllegalStateException("No loader for config version: " + i);
                 }
+                migrateConfig = loader.migrate(migrateConfig);
             }
 
             ConfigImpl newConfig = (ConfigImpl) migrateConfig;
 
             // 古いコンフィグを旧コンフィグフォルダへコピー
             FNDataUtil.wishMkdir(OLD_CONFIG_FOLDER);
-            DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH.mm.ss");
-            String timeText = LocalDateTime.now().format(timeFormatter);
+            String timeText = LocalDateTime.now().format(BACKUP_TIME_FORMATTER);
             File oldConfigFIle = new File(OLD_CONFIG_FOLDER, "config_v" + configVersionNum + "_" + timeText + ".json5");
             try {
                 Files.copy(CONFIG_FILE.toPath(), oldConfigFIle.toPath());

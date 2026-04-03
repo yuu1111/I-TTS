@@ -101,6 +101,19 @@ public class Json5Utils {
     }
 
     /**
+     * Jsonからオブジェクトを取得する、存在しない場合は空のオブジェクトを返す
+     *
+     * @param jo      Jsonオブジェクト
+     * @param keyName キー名
+     * @return Jsonオブジェクト
+     */
+    @NotNull
+    public static JsonObject getObjectOrEmpty(@NotNull JsonObject jo, @NotNull String keyName) {
+        JsonObject value = jo.getObject(keyName);
+        return value != null ? value : new JsonObject();
+    }
+
+    /**
      * Json5からintを取得
      *
      * @param json5 Json

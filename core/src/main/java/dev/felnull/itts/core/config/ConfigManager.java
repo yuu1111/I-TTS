@@ -20,7 +20,7 @@ public class ConfigManager implements ITTSBaseManager {
     /**
      * コンフィグ
      */
-    private Config config;
+    private volatile Config config;
 
     /**
      * コンストラクタ
@@ -34,7 +34,7 @@ public class ConfigManager implements ITTSBaseManager {
     @Override
     public @NotNull CompletableFuture<?> init() {
         return CompletableFuture.supplyAsync(configAccess::loadConfig, getAsyncExecutor())
-                .thenAcceptAsync(cfg -> {
+                .thenAccept(cfg -> {
                     this.config = cfg;
 
                     if (this.config == null) {
@@ -46,7 +46,7 @@ public class ConfigManager implements ITTSBaseManager {
                     }
 
                     getITTSLogger().info("Configuration setup completed");
-                }, getAsyncExecutor());
+                });
     }
 
     public Config getConfig() {

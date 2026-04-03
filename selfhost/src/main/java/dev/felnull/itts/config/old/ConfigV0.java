@@ -6,7 +6,6 @@ import dev.felnull.itts.config.ConfigLoader;
 import dev.felnull.itts.utils.Json5Utils;
 
 import java.util.List;
-import java.util.Optional;
 
 /**
  * 旧バージョンのコンフィグ
@@ -38,10 +37,10 @@ public record ConfigV0(
             String botToken = Json5Utils.getStringOrElse(json5, "bot_token", "");
             int themeColor = json5.getInt("theme_color", 0xFF00FF);
             long cacheTime = json5.getLong("cache_time", 180000);
-            VoiceTextConfigV0 voiceTextConfig = VoiceTextConfigV0.fromJson(Optional.ofNullable(json5.getObject("voice_text")).orElseGet(JsonObject::new));
-            VoicevoxConfigV0 voicevoxConfig = VoicevoxConfigV0.fromJson(Optional.ofNullable(json5.getObject("voicevox")).orElseGet(JsonObject::new));
-            VoicevoxConfigV0 coeirolnkConfig = VoicevoxConfigV0.fromJson(Optional.ofNullable(json5.getObject("coeirolnk")).orElseGet(JsonObject::new));
-            VoicevoxConfigV0 sharevoxConfig = VoicevoxConfigV0.fromJson(Optional.ofNullable(json5.getObject("sharevox")).orElseGet(JsonObject::new));
+            VoiceTextConfigV0 voiceTextConfig = VoiceTextConfigV0.fromJson(Json5Utils.getObjectOrEmpty(json5,"voice_text"));
+            VoicevoxConfigV0 voicevoxConfig = VoicevoxConfigV0.fromJson(Json5Utils.getObjectOrEmpty(json5,"voicevox"));
+            VoicevoxConfigV0 coeirolnkConfig = VoicevoxConfigV0.fromJson(Json5Utils.getObjectOrEmpty(json5,"coeirolnk"));
+            VoicevoxConfigV0 sharevoxConfig = VoicevoxConfigV0.fromJson(Json5Utils.getObjectOrEmpty(json5,"sharevox"));
 
             return new ConfigV0(
                     botToken,
