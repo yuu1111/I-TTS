@@ -50,16 +50,18 @@ public class CachedVoiceTrackLoader implements VoiceTrackLoader, ITTSRuntimeUse 
     @Override
     public CompletableFuture<AudioTrack> load() {
         return getCacheManager().loadOrRestore(hash, streamOpener)
-                .thenApplyAsync(this::loadTack, getAsyncExecutor());
+                .thenApplyAsync(this::loadTrack, getAsyncExecutor());
     }
 
-    private AudioTrack loadTack(CacheUseEntry cacheUseEntry) {
+    private AudioTrack loadTrack(CacheUseEntry cacheUseEntry) {
         cacheEntry.set(cacheUseEntry);
+        String path = cacheUseEntry.file().getAbsolutePath();
         VoiceAudioManager vam = getVoiceAudioManager();
         AtomicReference<AudioTrack> retTrack = new AtomicReference<>();
+        AtomicReference<Exception> error = new AtomicReference<>();
 
         try {
-            vam.getAudioPlayerManager().loadItem(cacheUseEntry.file().getAbsolutePath(), new AudioLoadResultHandler() {
+            vam.getAudioPlayerManager().loadItem(path, new AudioLoadResultHandler() {
                 @Override
                 public void trackLoaded(AudioTrack track) {
                     retTrack.set(track);
@@ -67,23 +69,30 @@ public class CachedVoiceTrackLoader implements VoiceTrackLoader, ITTSRuntimeUse 
 
                 @Override
                 public void playlistLoaded(AudioPlaylist playlist) {
+                    error.set(new RuntimeException("Unexpected playlist loaded: " + path));
                 }
 
                 @Override
                 public void noMatches() {
+                    error.set(new RuntimeException("No audio track found: " + path));
                 }
 
                 @Override
                 public void loadFailed(FriendlyException exception) {
+                    error.set(exception);
                 }
             }).get();
         } catch (InterruptedException | ExecutionException e) {
             throw new RuntimeException(e);
         }
 
+        if (error.get() != null) {
+            throw new RuntimeException("Failed to load track: " + path, error.get());
+        }
+
         AudioTrack ret = retTrack.get();
         if (ret == null) {
-            throw new RuntimeException("Failed to load track");
+            throw new RuntimeException("Failed to load track: " + path);
         }
 
         return ret;
