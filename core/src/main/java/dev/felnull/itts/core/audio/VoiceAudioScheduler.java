@@ -23,15 +23,6 @@ import java.util.concurrent.atomic.AtomicReference;
 public class VoiceAudioScheduler extends AudioEventAdapter implements ITTSRuntimeUse {
 
     /**
-     * 現在再生中のテキストと終了時処理
-     *
-     * @param loadedSaidText 読み込み済み読み上げテキスト
-     * @param playEndRun     再生終了後の処理
-     */
-    private record PlayingEntry(LoadedSaidText loadedSaidText, Runnable playEndRun) {
-    }
-
-    /**
      * オーディオマネージャー
      */
     private final AudioManager audioManager;
@@ -130,6 +121,15 @@ public class VoiceAudioScheduler extends AudioEventAdapter implements ITTSRuntim
             old.loadedSaidText().setAlreadyUsed(true);
             old.playEndRun().run();
         }
+    }
+
+    /**
+     * 現在再生中のテキストと終了時処理
+     *
+     * @param loadedSaidText 読み込み済み読み上げテキスト
+     * @param playEndRun     再生終了後の処理
+     */
+    private record PlayingEntry(LoadedSaidText loadedSaidText, Runnable playEndRun) {
     }
 
     /**

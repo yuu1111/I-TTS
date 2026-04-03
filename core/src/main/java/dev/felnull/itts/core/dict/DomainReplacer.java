@@ -1,6 +1,7 @@
 package dev.felnull.itts.core.dict;
 
 import dev.felnull.itts.core.ITTSRuntimeUse;
+
 import java.util.regex.Pattern;
 
 /**

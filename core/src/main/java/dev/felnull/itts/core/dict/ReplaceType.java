@@ -20,11 +20,6 @@ public enum ReplaceType implements NameSerializableEnum {
         this.name = name;
     }
 
-    @Override
-    public String getName() {
-        return name;
-    }
-
     /**
      * 名前から取得
      *
@@ -33,5 +28,10 @@ public enum ReplaceType implements NameSerializableEnum {
      */
     public static Optional<ReplaceType> getByName(String name) {
         return NameSerializableEnum.getByName(ReplaceType.class, name);
+    }
+
+    @Override
+    public String getName() {
+        return name;
     }
 }

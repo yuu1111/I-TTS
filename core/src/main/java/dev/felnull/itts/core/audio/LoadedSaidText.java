@@ -59,6 +59,10 @@ public class LoadedSaidText {
         dispose.run();
     }
 
+    public boolean isAlreadyUsed() {
+        return alreadyUsed.get();
+    }
+
     /**
      * 読み上げ終わったかどうかを指定
      *
@@ -66,10 +70,6 @@ public class LoadedSaidText {
      */
     public void setAlreadyUsed(boolean alreadyUsed) {
         this.alreadyUsed.set(alreadyUsed);
-    }
-
-    public boolean isAlreadyUsed() {
-        return alreadyUsed.get();
     }
 
     public AudioTrack getTrack() {

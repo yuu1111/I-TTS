@@ -10,17 +10,26 @@ import java.util.function.Function;
  */
 public class RegexUtil {
 
-    /** オプション保持用のリスト */
+    /**
+     * オプション保持用のリスト
+     */
     private final List<RegexOption> optionList = new ArrayList<>();
 
-    /** 日本語と英語をわけます */
+    /**
+     * ソート済みオプションのキャッシュ
+     */
+    private List<RegexOption> sortedOptions;
+
+    /**
+     * 日本語と英語をわける
+     */
     private List<String> splitJapaneseEnglish(String text) {
         String[] dividedText = text.split("");
         List<String> createdText = new ArrayList<>();
         StringBuilder tmpText = new StringBuilder();
         boolean en = false;
 
-        for (String txt :dividedText) {
+        for (String txt : dividedText) {
             if (txt.matches("[A-Za-z0-9:/#$%&.,-?_]+")) {
                 if (!en) {
                     createdText.add(tmpText.toString());
@@ -48,14 +57,29 @@ public class RegexUtil {
     /**
      * オプション追加
      *
-     * @param priority 優先度
+     * @param priority     優先度
      * @param replacedText 置き換えテキスト
      * @param testFunction 置き換え判定用関数
-     * @return this このクラスが返ってきます
+     * @return このインスタンス
      */
     public RegexUtil addOption(int priority, String replacedText, Function<String, Boolean> testFunction) {
         this.optionList.add(new RegexOption(priority, replacedText, testFunction));
+        this.sortedOptions = null;
         return this;
+    }
+
+    /**
+     * ソート済みオプションリストを取得
+     *
+     * @return ソート済みオプションリスト
+     */
+    private List<RegexOption> getSortedOptions() {
+        if (sortedOptions == null) {
+            sortedOptions = optionList.stream()
+                    .sorted(Comparator.comparingInt(RegexOption::priority))
+                    .toList();
+        }
+        return sortedOptions;
     }
 
     /**
@@ -66,12 +90,14 @@ public class RegexUtil {
      */
     public String replaceText(String text) {
         List<String> texts = splitJapaneseEnglish(text);
+        List<RegexOption> sorted = getSortedOptions();
         List<String> createdText = new ArrayList<>();
 
-        LOOP: for (String txt :texts) {
-            for (RegexOption ops :optionList.stream().sorted(Comparator.comparingInt(o -> o.priority)).toList()) {
-                if (ops.testFunction.apply(txt)) {
-                    createdText.add(ops.replacedText);
+        LOOP:
+        for (String txt : texts) {
+            for (RegexOption ops : sorted) {
+                if (ops.testFunction().apply(txt)) {
+                    createdText.add(ops.replacedText());
                     continue LOOP;
                 }
             }
@@ -81,34 +107,14 @@ public class RegexUtil {
         return String.join("", createdText);
     }
 
-
-    /** オプション定義用クラス
+    /**
+     * オプション定義
      *
+     * @param priority     優先度
+     * @param replacedText 置き換えテキスト
+     * @param testFunction 置き換え判定用関数
      * @author shiro8613
-     * */
-    public static class RegexOption {
-
-        /** プライオリティ */
-        public int priority;
-
-        /** 判定関数 */
-        public Function<String, Boolean> testFunction;
-
-        /**　置き換えテキスト*/
-        public String replacedText;
-
-        /**
-         * コンストラクタ
-         *
-         * @param priority 優先度
-         * @param replacedText 置き換えテキスト
-         * @param testFunction 置き換え判定用関数
-         */
-        public RegexOption(int priority, String replacedText, Function<String, Boolean> testFunction) {
-            this.priority = priority;
-            this.replacedText = replacedText;
-            this.testFunction = testFunction;
-        }
+     */
+    private record RegexOption(int priority, String replacedText, Function<String, Boolean> testFunction) {
     }
-
 }

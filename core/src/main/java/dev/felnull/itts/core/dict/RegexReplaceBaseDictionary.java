@@ -3,7 +3,6 @@ package dev.felnull.itts.core.dict;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
@@ -25,8 +24,10 @@ public abstract class RegexReplaceBaseDictionary implements Dictionary {
     @Override
     public @NotNull String apply(@NotNull String text, long guildId) {
         Map<Pattern, Function<String, String>> replaces = getReplaces(guildId);
-        AtomicReference<String> ret = new AtomicReference<>(text);
-        replaces.forEach((pattern, rep) -> ret.set(pattern.matcher(ret.get()).replaceAll(res -> rep.apply(res.group()))));
-        return ret.get();
+        String result = text;
+        for (Map.Entry<Pattern, Function<String, String>> entry : replaces.entrySet()) {
+            result = entry.getKey().matcher(result).replaceAll(res -> entry.getValue().apply(res.group()));
+        }
+        return result;
     }
 }

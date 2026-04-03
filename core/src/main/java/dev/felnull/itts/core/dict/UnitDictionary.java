@@ -18,6 +18,17 @@ import java.util.regex.Pattern;
  * @author MORIMORI0317
  */
 public class UnitDictionary implements Dictionary {
+
+    /**
+     * 英字とハイフンの正規表現
+     */
+    private static final Pattern ALPHABETS_REGEX = Pattern.compile("[a-zA-Z-]+");
+
+    /**
+     * 英字の正規表現
+     */
+    private static final Pattern ALPHABET_REGEX = Pattern.compile("[a-zA-Z]+");
+
     /**
      * 単位に置き換える文字のひとつ前の文字を表す正規表現
      */
@@ -66,6 +77,33 @@ public class UnitDictionary implements Dictionary {
      */
     private static final Prefix[] NORMAL_ALL_PREFIX = ArrayUtils.addAll(NORMAL_UP_PREFIX, NORMAL_DOWN_PREFIX);
 
+    private static Pattern createPrefixAndUnitPattern() {
+        StringBuilder lastUnits = new StringBuilder();
+        StringBuilder preOrUnitMiddle = new StringBuilder();
+        for (Unit unit : Unit.values()) {
+            String lst = unit.word.substring(unit.word.length() - 1);
+            lastUnits.append(lst.toLowerCase(Locale.ROOT)).append(lst.toUpperCase(Locale.ROOT));
+
+            String middle = unit.word.substring(0, unit.word.length() - 1);
+            preOrUnitMiddle.append(middle.toLowerCase(Locale.ROOT)).append(middle.toUpperCase(Locale.ROOT));
+        }
+
+        for (Prefix prefix : Prefix.values()) {
+            if (prefix.word == null || prefix.read == null) {
+                continue;
+            }
+
+            Matcher mc = ALPHABET_REGEX.matcher(prefix.word);
+            if (mc.matches()) {
+                preOrUnitMiddle.append(prefix.word.toLowerCase(Locale.ROOT)).append(prefix.word.toUpperCase(Locale.ROOT));
+            } else {
+                preOrUnitMiddle.append(prefix.word);
+            }
+        }
+
+        return Pattern.compile("\\d+[" + preOrUnitMiddle + "]*[" + lastUnits + "]");
+    }
+
     @Override
     public @NotNull String apply(@NotNull String text, long guildId) {
         return UNIT_PREFIX_REGEX.matcher(text).replaceAll(matchResult -> {
@@ -93,37 +131,8 @@ public class UnitDictionary implements Dictionary {
         return "unit";
     }
 
-    private static Pattern createPrefixAndUnitPattern() {
-        Pattern alphabet = Pattern.compile("[a-zA-Z]+");
-        StringBuilder lastUnits = new StringBuilder();
-        StringBuilder preOrUnitMiddle = new StringBuilder();
-        for (Unit unit : Unit.values()) {
-            String lst = unit.word.substring(unit.word.length() - 1);
-            lastUnits.append(lst.toLowerCase(Locale.ROOT)).append(lst.toUpperCase(Locale.ROOT));
-
-            String middle = unit.word.substring(0, unit.word.length() - 1);
-            preOrUnitMiddle.append(middle.toLowerCase(Locale.ROOT)).append(middle.toUpperCase(Locale.ROOT));
-        }
-
-        for (Prefix prefix : Prefix.values()) {
-            if (prefix.word == null || prefix.read == null) {
-                continue;
-            }
-
-            Matcher mc = alphabet.matcher(prefix.word);
-            if (mc.matches()) {
-                preOrUnitMiddle.append(prefix.word.toLowerCase(Locale.ROOT)).append(prefix.word.toUpperCase(Locale.ROOT));
-            } else {
-                preOrUnitMiddle.append(prefix.word);
-            }
-        }
-
-        return Pattern.compile("\\d+[" + preOrUnitMiddle + "]*[" + lastUnits + "]");
-    }
-
     private String replaceUnitAndPrefix(String text, String after) {
-        Pattern alphabets = Pattern.compile("[a-zA-Z-]+");
-        if (after != null && alphabets.matcher(after).matches()) {
+        if (after != null && ALPHABETS_REGEX.matcher(after).matches()) {
             return text;
         }
 
@@ -404,45 +413,12 @@ public class UnitDictionary implements Dictionary {
             this.pattern = Pattern.compile(word);
         }
 
-        public String getWord() {
-            return word;
-        }
-
-        public String getRead() {
-            return read;
-        }
-
-        public UnitDictionary.Prefix[] getPrefixes() {
-            return prefixes;
-        }
-
-        public boolean isEndMache(String text) {
-            if (findPrefix(text)) {
-                return true;
-            }
-
-            Pattern alphabet = Pattern.compile("[a-zA-Z]+");
-
-            text = alphabet.matcher(text).replaceAll(n -> n.group().toLowerCase(Locale.ROOT));
-
-            if (findPrefix(text)) {
-                return true;
-            }
-
-            text = alphabet.matcher(text).replaceAll(n -> n.group().toUpperCase(Locale.ROOT));
-
-            return findPrefix(text);
-        }
-
-        private boolean findPrefix(String text) {
-            Matcher m = pattern.matcher(text);
-            int lstm = -1;
-            while (m.find()) {
-                lstm = m.end();
-            }
-            return lstm == text.length();
-        }
-
+        /**
+         * テキストの末尾に一致する単位を取得する
+         *
+         * @param text テキスト
+         * @return 一致した単位、見つからなければnull
+         */
         public static Unit getEndUnit(String text) {
             List<Unit> maches = new ArrayList<>();
 
@@ -467,6 +443,64 @@ public class UnitDictionary implements Dictionary {
             }
 
             return maches.get(0);
+        }
+
+        /**
+         * 置き換え文字を取得
+         *
+         * @return 置き換え文字
+         */
+        public String getWord() {
+            return word;
+        }
+
+        /**
+         * 読みを取得
+         *
+         * @return 読み
+         */
+        public String getRead() {
+            return read;
+        }
+
+        /**
+         * 使用可能な接頭辞を取得
+         *
+         * @return 接頭辞の配列
+         */
+        public UnitDictionary.Prefix[] getPrefixes() {
+            return prefixes;
+        }
+
+        /**
+         * テキストの末尾がこの単位に一致するか判定する
+         *
+         * @param text テキスト
+         * @return 一致すればtrue
+         */
+        public boolean isEndMache(String text) {
+            if (findPrefix(text)) {
+                return true;
+            }
+
+            text = ALPHABET_REGEX.matcher(text).replaceAll(n -> n.group().toLowerCase(Locale.ROOT));
+
+            if (findPrefix(text)) {
+                return true;
+            }
+
+            text = ALPHABET_REGEX.matcher(text).replaceAll(n -> n.group().toUpperCase(Locale.ROOT));
+
+            return findPrefix(text);
+        }
+
+        private boolean findPrefix(String text) {
+            Matcher m = pattern.matcher(text);
+            int lstm = -1;
+            while (m.find()) {
+                lstm = m.end();
+            }
+            return lstm == text.length();
         }
     }
 
@@ -622,22 +656,14 @@ public class UnitDictionary implements Dictionary {
             this(word, read, false);
         }
 
-        public String getRead() {
-            return read;
-        }
-
-        public String getWord() {
-            return word;
-        }
-
-        public boolean isUp() {
-            return up;
-        }
-
-        public boolean isMache(String text) {
-            return word.equalsIgnoreCase(text);
-        }
-
+        /**
+         * テキストと単位から適切な接頭辞を取得する
+         *
+         * @param text テキスト
+         * @param unit 単位
+         * @param big  大文字かどうか
+         * @return 接頭辞、見つからなければnull
+         */
         public static Prefix getPrefix(String text, UnitDictionary.Unit unit, boolean big) {
             List<Prefix> prefixes = new ArrayList<>();
             for (Prefix prefix : unit.getPrefixes()) {
@@ -664,6 +690,43 @@ public class UnitDictionary implements Dictionary {
             }
 
             return don;
+        }
+
+        /**
+         * 読みを取得
+         *
+         * @return 読み
+         */
+        public String getRead() {
+            return read;
+        }
+
+        /**
+         * 置き換え文字を取得
+         *
+         * @return 置き換え文字
+         */
+        public String getWord() {
+            return word;
+        }
+
+        /**
+         * 大きい接頭辞かどうか
+         *
+         * @return 大きい接頭辞ならtrue
+         */
+        public boolean isUp() {
+            return up;
+        }
+
+        /**
+         * テキストがこの接頭辞に一致するか判定する
+         *
+         * @param text テキスト
+         * @return 一致すればtrue
+         */
+        public boolean isMache(String text) {
+            return word.equalsIgnoreCase(text);
         }
     }
 }

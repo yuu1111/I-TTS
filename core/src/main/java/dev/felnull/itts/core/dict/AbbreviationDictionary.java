@@ -5,7 +5,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.Map;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -21,40 +20,34 @@ public class AbbreviationDictionary implements Dictionary {
     private static final Pattern CODE_BLOCK_REGEX = Pattern.compile("```(.|\n)*```");
 
     /**
+     * IPv4アドレスの正規表現
+     */
+    private static final Pattern IPV4_REGEX = Pattern.compile(
+            "^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$");
+
+    /**
+     * IPv6アドレスの正規表現
+     */
+    private static final Pattern IPV6_REGEX = Pattern.compile(
+            "(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|"
+                    + "([0-9a-fA-F]{1,4}:){1,7}:|"
+                    + "([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|"
+                    + "([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|"
+                    + "([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|"
+                    + "([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|"
+                    + "([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|"
+                    + "[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|"
+                    + ":((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]+|"
+                    + "::(ffff(:0{1,4})?:)?((25[0-5]|(2[0-4]|1?[0-9])?[0-9])\\.){3}(25[0-5]|"
+                    + "(2[0-4]|1?[0-9])?[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|"
+                    + "(2[0-4]|1?[0-9])?[0-9])\\.){3}(25[0-5]|(2[0-4]|1?[0-9])?[0-9]))");
+
+    /**
      * 正規表現関係
      */
     private final RegexUtil regexUtil = new RegexUtil()
-            /*.addOption(1, "ユーアルエルショウリャク", s -> {
-                Pattern pattern = Pattern.compile("https?://[\\w!?/+\\-_~=;.,*&@#$%()'\\[\\]]+");
-                Matcher matcher = pattern.matcher(s);
-                return matcher.find();
-            })*/
-            /*.addOption(1, "ドメインショウリャク", s -> {
-                Pattern pattern = Pattern.compile("^([a-zA-Z0-9][a-zA-Z0-9-]*[a-zA-Z0-9]*\\.)+[a-zA-Z]{2,}$");
-                Matcher matcher = pattern.matcher(s);
-                return matcher.find();
-            })*/
-            .addOption(1, "アイピーブイフォーショウリャク", s -> {
-                Pattern pattern = Pattern.compile("^((25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])\\.){3}(25[0-5]|2[0-4][0-9]|1[0-9][0-9]|[1-9]?[0-9])$");
-                Matcher matcher = pattern.matcher(s);
-                return matcher.matches();
-            })
-            .addOption(1, "アイピーブイロクショウリャク", s -> {
-                Pattern pattern = Pattern.compile("(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|"
-                        + "([0-9a-fA-F]{1,4}:){1,7}:|"
-                        + "([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|"
-                        + "([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|"
-                        + "([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|"
-                        + "([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|"
-                        + "([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|"
-                        + "[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|"
-                        + ":((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]+|"
-                        + "::(ffff(:0{1,4})?:)?((25[0-5]|(2[0-4]|1?[0-9])?[0-9])\\.){3}(25[0-5]|"
-                        + "(2[0-4]|1?[0-9])?[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|"
-                        + "(2[0-4]|1?[0-9])?[0-9])\\.){3}(25[0-5]|(2[0-4]|1?[0-9])?[0-9]))");
-                Matcher matcher = pattern.matcher(s);
-                return matcher.matches();
-            });
+            .addOption(1, "アイピーブイフォーショウリャク", s -> IPV4_REGEX.matcher(s).matches())
+            .addOption(1, "アイピーブイロクショウリャク", s -> IPV6_REGEX.matcher(s).matches());
 
     /**
      * URLリプレーサー

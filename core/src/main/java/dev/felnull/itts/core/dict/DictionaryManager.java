@@ -14,7 +14,6 @@ import org.jetbrains.annotations.Nullable;
 import org.jetbrains.annotations.Unmodifiable;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 /**
@@ -70,6 +69,12 @@ public class DictionaryManager implements ITTSRuntimeUse {
     private final List<Dictionary> dictionaries = ImmutableList.of(globalDictionary, serverDictionary, abbreviationDictionary, unitDictionary, romajiDictionary);
 
     /**
+     * 辞書IDから辞書へのルックアップマップ
+     */
+    private final Map<String, Dictionary> dictionaryById = dictionaries.stream()
+            .collect(Collectors.toUnmodifiableMap(Dictionary::getId, d -> d));
+
+    /**
      * デフォルトで有効な辞書
      */
     private final List<Dictionary> defaultEnableDictionaries = ImmutableList.of(
@@ -88,10 +93,7 @@ public class DictionaryManager implements ITTSRuntimeUse {
      */
     @Nullable
     public Dictionary getDictionary(@NotNull String id, long guildId) {
-        return dictionaries.stream()
-                .filter(r -> id.equals(r.getId()))
-                .findAny()
-                .orElse(null);
+        return dictionaryById.get(id);
     }
 
     /**
@@ -222,12 +224,11 @@ public class DictionaryManager implements ITTSRuntimeUse {
      * @return 適用済みテキスト
      */
     public String applyDict(String text, long guildId) {
-        AtomicReference<String> retText = new AtomicReference<>(text);
-
-        getAllPriorityOrderEnableDictionaries(guildId)
-                .forEach(dict -> retText.set(dict.apply(retText.get(), guildId)));
-
-        return retText.get();
+        String result = text;
+        for (Dictionary dict : getAllPriorityOrderEnableDictionaries(guildId)) {
+            result = dict.apply(result, guildId);
+        }
+        return result;
     }
 
 

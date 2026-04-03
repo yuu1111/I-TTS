@@ -34,7 +34,7 @@ public class URLReplacer {
      */
     public String replace(String text) {
 
-        if (text.contains("http") | text.contains("ftp")) {
+        if (text.contains("http") || text.contains("ftp")) {
             return URL_REGEX.matcher(text).replaceAll(replacedText);
         }
 
