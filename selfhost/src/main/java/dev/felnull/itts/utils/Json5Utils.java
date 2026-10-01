@@ -8,7 +8,6 @@ import com.google.common.collect.ImmutableList;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Unmodifiable;
 
-import java.math.BigDecimal;
 import java.util.List;
 import java.util.function.Function;
 
@@ -102,7 +101,7 @@ public class Json5Utils {
     }
 
     /**
-     * Json5からintを取得
+     * Json5からintを取得。小数・指数表記とintの範囲外の値は拒否する
      *
      * @param json5 Json
      * @param key   キー
@@ -110,9 +109,14 @@ public class Json5Utils {
      */
     public static int getInt(JsonObject json5, String key) {
         if (json5.get(key) instanceof JsonPrimitive prim && prim.getValue() instanceof Number number) {
+            String value = number.toString();
+            if (!value.matches("[+-]?[0-9]+")) {
+                throw new IllegalStateException("Not Integer: " + key);
+            }
+
             try {
-                return new BigDecimal(number.toString()).intValueExact();
-            } catch (NumberFormatException | ArithmeticException e) {
+                return Integer.parseInt(value);
+            } catch (NumberFormatException e) {
                 throw new IllegalStateException("Not Integer: " + key, e);
             }
         }

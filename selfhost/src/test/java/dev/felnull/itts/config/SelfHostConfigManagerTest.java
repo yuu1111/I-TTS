@@ -132,7 +132,7 @@ class SelfHostConfigManagerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"-1", "1.5", "4294967298", "\"2\"", "null", "{}"})
+    @ValueSource(strings = {"-1", "1.5", "2.0", "2e0", "2E+0", "20e-1", "4294967298", "\"2\"", "null", "{}"})
     void rejectsInvalidVersionsWithoutChangingFile(String version) throws Exception {
         Path file = directory.resolve("config.json5");
         String content = "{config_version: " + version + "}";
