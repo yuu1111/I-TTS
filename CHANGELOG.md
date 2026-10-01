@@ -8,6 +8,8 @@
 
 ### Added
 
+- OpenAI互換TTSに対応し、接続先・モデル・話者一覧の設定を追加
+
 ### Changed
 
 ### Deprecated
