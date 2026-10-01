@@ -24,8 +24,8 @@ public class OpenAiTtsVoice extends CachedVoice {
      * コンストラクタ
      *
      * @param voiceType 声タイプ
-     * @param manager TTS管理
-     * @param speaker 話者名
+     * @param manager   TTS管理
+     * @param speaker   話者名
      */
     protected OpenAiTtsVoice(VoiceType voiceType, OpenAiTtsManager manager, String speaker) {
         super(voiceType);

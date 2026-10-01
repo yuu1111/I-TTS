@@ -39,7 +39,7 @@ public class OpenAiTtsManager {
     /**
      * コンストラクタ
      *
-     * @param config コンフィグの取得元
+     * @param config     コンフィグの取得元
      * @param httpClient 共有HTTPクライアントの取得元
      */
     public OpenAiTtsManager(Supplier<OpenAiTtsConfig> config, Supplier<HttpClient> httpClient) {
@@ -98,9 +98,9 @@ public class OpenAiTtsManager {
      * 音声ストリームを開く
      *
      * @param voice 話者名
-     * @param text 読み上げるテキスト
+     * @param text  読み上げるテキスト
      * @return 呼び出し元で閉じる音声ストリーム
-     * @throws IOException HTTP通信またはAPI応答の異常
+     * @throws IOException          HTTP通信またはAPI応答の異常
      * @throws InterruptedException 割り込み例外
      */
     public InputStream openVoiceStream(String voice, String text) throws IOException, InterruptedException {

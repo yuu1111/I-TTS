@@ -63,7 +63,8 @@ public interface Config {
      * @return OpenAI互換TTSのコンフィグ
      */
     default OpenAiTtsConfig getOpenAiTtsConfig() {
-        return new OpenAiTtsConfig() { };
+        return new OpenAiTtsConfig() {
+        };
     }
 
     /**
