@@ -73,6 +73,8 @@ java25のディレクトリ\bin\java.exe -jar itts-selfhost-2.0.0.jar
     * "check_time" それぞれVOICEVOX系のエンジンが生きているか確認する間隔(ミリ秒)
 
 OpenAI互換TTSはWAV形式の音声を要求します。接続先は`response_format: "wav"`に対応している必要があります。
+既存の`config.json5`は起動時に`config_version: 2`から`3`へ移行し、`openai_tts`がない場合は無効の初期設定を追加します。
+移行前の設定は`old_config`にバックアップします。設定済みの`openai_tts`は引き継ぎます。
 話者一覧はAPIから自動取得せず、`voices`に設定した名前を`/voice change`のカテゴリ「OpenAI互換TTS」で選択できます。
 サーバーの`default-voice`には`openai_tts:話者名`を指定できます。設定変更後はBOTを再起動してください。
 

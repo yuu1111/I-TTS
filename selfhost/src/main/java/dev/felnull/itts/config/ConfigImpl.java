@@ -77,6 +77,10 @@ public record ConfigImpl(
 
         @Override
         public ConfigImpl migrate(Object oldConfig) {
+            // バージョン2から3への移行は設定項目の追加のみで、読み込み済みの値を引き継ぐ
+            if (oldConfig instanceof ConfigImpl configV2) {
+                return configV2;
+            }
             ConfigV1 configV1 = (ConfigV1) oldConfig;
             ConfigV1.DataBaseConfigV1 db = configV1.dataBaseConfig();
 

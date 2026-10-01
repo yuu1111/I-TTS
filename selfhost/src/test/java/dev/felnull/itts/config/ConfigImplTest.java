@@ -21,6 +21,8 @@ class ConfigImplTest {
         assertFalse(ConfigImpl.LOADER.load(new JsonObject()).getOpenAiTtsConfig().isEnable());
         assertFalse(ConfigImpl.createInitialConfig().getOpenAiTtsConfig().isEnable());
         assertFalse(ConfigImpl.LOADER.migrate(ConfigV1.LOADER.load(new JsonObject())).getOpenAiTtsConfig().isEnable());
+        ConfigImpl version2 = ConfigImpl.LOADER.load(new JsonObject());
+        assertEquals(version2, ConfigImpl.LOADER.migrate(version2));
     }
 
     @Test
