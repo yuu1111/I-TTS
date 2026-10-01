@@ -6,7 +6,6 @@ import blue.endless.jankson.JsonObject;
 import blue.endless.jankson.JsonPrimitive;
 import blue.endless.jankson.api.SyntaxError;
 import com.google.common.collect.ImmutableMap;
-import dev.felnull.fnjl.util.FNDataUtil;
 import dev.felnull.itts.config.old.ConfigV0;
 import dev.felnull.itts.config.old.ConfigV1;
 import dev.felnull.itts.core.config.Config;
@@ -18,7 +17,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
@@ -28,6 +26,7 @@ import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Map;
+import java.util.UUID;
 
 /**
  * SelfHost用コンフィグマネージャー
@@ -114,6 +113,9 @@ public class SelfHostConfigManager implements ConfigContext {
             throw new IllegalStateException("Failed to load config", e);
         }
         int configVersionNum = Json5Utils.getInt(configJo, "config_version");
+        if (!configLoaders.containsKey(configVersionNum)) {
+            throw new IllegalStateException("Unsupported config version: " + configVersionNum);
+        }
 
         Config config;
 
@@ -137,11 +139,11 @@ public class SelfHostConfigManager implements ConfigContext {
             ConfigImpl newConfig = (ConfigImpl) migrateConfig;
 
             // 古いコンフィグを旧コンフィグフォルダへコピー
-            FNDataUtil.wishMkdir(oldConfigFolder);
             DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH.mm.ss");
             String timeText = LocalDateTime.now().format(timeFormatter);
-            File oldConfigFIle = new File(oldConfigFolder, "config_v" + configVersionNum + "_" + timeText + ".json5");
+            File oldConfigFIle = new File(oldConfigFolder, "config_v" + configVersionNum + "_" + timeText + "_" + UUID.randomUUID() + ".json5");
             try {
+                Files.createDirectories(oldConfigFolder.toPath());
                 Files.copy(configFile.toPath(), oldConfigFIle.toPath());
             } catch (IOException e) {
                 throw new IllegalStateException("Copy failed", e);
@@ -181,8 +183,19 @@ public class SelfHostConfigManager implements ConfigContext {
             configJo.put("openai_tts", new OpenAiTtsConfigImpl().toJson(), "OpenAI互換TTSのコンフィグ");
         }
         configJo.put("config_version", new JsonPrimitive(3));
+        writeJsonConfig(configFile, configJo);
+        return true;
+    }
+
+    /**
+     * 一時ファイルを経由して設定を保存する
+     *
+     * @param configFile 設定ファイル
+     * @param configJo 保存する設定
+     */
+    static void writeJsonConfig(Path configFile, JsonObject configJo) {
         try {
-            Path target = configFile.toAbsolutePath();
+            Path target = Files.exists(configFile) ? configFile.toRealPath() : configFile.toAbsolutePath();
             Path temporary = Files.createTempFile(target.getParent(), "itts-config-", ".tmp");
             try {
                 try (BufferedWriter writer = Files.newBufferedWriter(temporary, StandardCharsets.UTF_8)) {
@@ -197,9 +210,8 @@ public class SelfHostConfigManager implements ConfigContext {
                 Files.deleteIfExists(temporary);
             }
         } catch (IOException e) {
-            throw new IllegalStateException("Failed to migrate config from version 2 to 3", e);
+            throw new IllegalStateException("Failed to write config", e);
         }
-        return true;
     }
 
     private void writeConfig(ConfigImpl config, int version) {
@@ -207,10 +219,6 @@ public class SelfHostConfigManager implements ConfigContext {
         jo.put("config_version", new JsonPrimitive(version), "コンフィグのバージョン 変更しないでください！");
         config.writeToJson(jo);
 
-        try (BufferedWriter writer = new BufferedWriter((new FileWriter(configFile)))) {
-            jo.toJson(writer, JsonGrammar.JSON5, 0);
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to write config", e);
-        }
+        writeJsonConfig(configFile.toPath(), jo);
     }
 }

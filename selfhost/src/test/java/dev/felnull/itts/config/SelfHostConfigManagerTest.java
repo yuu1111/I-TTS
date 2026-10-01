@@ -8,6 +8,11 @@ import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -121,6 +126,84 @@ class SelfHostConfigManagerTest {
     void rejectsFutureVersionWithoutChangingFile() throws Exception {
         Path file = directory.resolve("config.json5");
         String content = "{config_version: 4}";
+        Files.writeString(file, content);
+        assertThrows(IllegalStateException.class, new SelfHostConfigManager(directory)::loadConfig);
+        assertEquals(content, Files.readString(file));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"-1", "1.5", "4294967298", "\"2\"", "null", "{}"})
+    void rejectsInvalidVersionsWithoutChangingFile(String version) throws Exception {
+        Path file = directory.resolve("config.json5");
+        String content = "{config_version: " + version + "}";
+        Files.writeString(file, content);
+        assertThrows(IllegalStateException.class, new SelfHostConfigManager(directory)::loadConfig);
+        assertEquals(content, Files.readString(file));
+        assertFalse(Files.exists(directory.resolve("old_config")));
+    }
+
+    @Test
+    void migratesDespiteExistingBackupWithSameTimestamp() throws Exception {
+        Path file = directory.resolve("config.json5");
+        Files.writeString(file, "{config_version: 2}");
+        Path backups = Files.createDirectory(directory.resolve("old_config"));
+        LocalDateTime now = LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH.mm.ss");
+        for (int offset = -5; offset <= 5; offset++) {
+            Files.writeString(backups.resolve("config_v2_" + now.plusSeconds(offset).format(formatter) + ".json5"), "existing backup");
+        }
+        new SelfHostConfigManager(directory).loadConfig();
+        assertEquals(3, Jankson.builder().build().load(file.toFile()).getInt("config_version", 0));
+        try (java.util.stream.Stream<Path> files = Files.list(backups)) {
+            assertEquals(12, files.count());
+        }
+    }
+
+    @Test
+    void preservesOriginalWhenBackupCannotBeCreated() throws Exception {
+        Path file = directory.resolve("config.json5");
+        String content = "{config_version: 1, bot_token: 'keep-token'}";
+        Files.writeString(file, content);
+        Files.writeString(directory.resolve("old_config"), "not a directory");
+        assertThrows(IllegalStateException.class, new SelfHostConfigManager(directory)::loadConfig);
+        assertEquals(content, Files.readString(file));
+    }
+
+    @Test
+    void cleansUpTemporaryFileWhenReplacementFails() throws Exception {
+        Path target = Files.createDirectory(directory.resolve("config.json5"));
+        Path original = target.resolve("keep.txt");
+        Files.writeString(original, "keep content");
+        assertThrows(IllegalStateException.class, () -> SelfHostConfigManager.writeJsonConfig(target, new JsonObject()));
+        assertEquals("keep content", Files.readString(original));
+        try (java.util.stream.Stream<Path> files = Files.list(directory)) {
+            assertEquals(1, files.count());
+        }
+    }
+
+    @Test
+    void migratesVersion0PreservingVoiceAndGeneralSettings() throws Exception {
+        Path file = directory.resolve("config.json5");
+        Files.writeString(file, """
+                {config_version: 0, bot_token: 'v0-token', theme_color: 123, cache_time: 456,
+                 voice_text: {enable: false, api_key: 'v0-key'},
+                 voicevox: {enable: true, api_url: ['http://localhost:50021'], check_time: 789}}
+                """);
+        dev.felnull.itts.core.config.Config config = new SelfHostConfigManager(directory).loadConfig();
+        assertEquals("v0-token", config.getBotToken());
+        assertEquals(123, config.getThemeColor());
+        assertEquals(456, config.getCacheTime());
+        assertFalse(config.getVoiceTextConfig().isEnable());
+        assertEquals("v0-key", config.getVoiceTextConfig().getApiKey());
+        assertEquals(789, config.getVoicevoxConfig().getCheckTime());
+        assertEquals(java.util.List.of("http://localhost:50021"), config.getVoicevoxConfig().getApiUrls());
+        assertEquals(3, Jankson.builder().build().load(file.toFile()).getInt("config_version", -1));
+    }
+
+    @Test
+    void rejectsMissingVersionWithoutChangingFile() throws Exception {
+        Path file = directory.resolve("config.json5");
+        String content = "{bot_token: 'keep-token'}";
         Files.writeString(file, content);
         assertThrows(IllegalStateException.class, new SelfHostConfigManager(directory)::loadConfig);
         assertEquals(content, Files.readString(file));
