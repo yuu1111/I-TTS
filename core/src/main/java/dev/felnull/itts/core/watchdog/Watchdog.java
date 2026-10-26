@@ -40,9 +40,15 @@ public final class Watchdog {
     private static final Duration REPORT_INTERVAL = Duration.ofMinutes(10);
 
     /**
-     * ログに出すスレッドの分類数の上限
+     * 常にログへ出すスレッドの分類。本数が0でも出し、増減を追えるようにする
      */
-    private static final int REPORT_MAX_ITEMS = 8;
+    private static final List<String> REPORT_PINNED = List.of("jda-audio-read", "jda-audio-write", "jda-audio-send",
+            "lava-playback", "async", "http", "unnamed");
+
+    /**
+     * 上記以外でログに出すスレッドの分類数の上限
+     */
+    private static final int REPORT_MAX_OTHERS = 5;
 
     /**
      * 終了時の終了コード
@@ -269,9 +275,12 @@ public final class Watchdog {
         Map<String, Integer> counts = ThreadNameClassifier.count(names);
         JDA jda = this.jdaSupplier.get();
 
-        this.logger.info("Threads: total={} limit={} jvm={} | {} | vc={} jda={}",
-                describeValue(current), describeLimit(limits.limit(), limits.source()), names.size(),
-                ThreadNameClassifier.format(counts, REPORT_MAX_ITEMS),
+        // totalの出典: OSから読めた場合はOS側の値、読めない場合はJVM内のJavaスレッド数(ネイティブスレッドを含まない)
+        String totalSource = limits.current().isPresent() ? limits.source() : "jvm";
+
+        this.logger.info("Threads: total={}({}) limit={} jvm={} | {} | vc={} jda={}",
+                describeValue(current), totalSource, describeLimit(limits.limit(), limits.source()), names.size(),
+                ThreadNameClassifier.format(counts, REPORT_PINNED, REPORT_MAX_OTHERS),
                 this.voiceConnectionCount.getAsInt(), jda == null ? "none" : jda.getStatus());
     }
 

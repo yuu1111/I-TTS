@@ -57,10 +57,31 @@ public class ThreadNameClassifierTest {
     }
 
     @Test
-    @DisplayName("1行に整形され、上限を超えた分は others にまとめられる")
-    void formatsWithOthers() {
+    @DisplayName("固定表示の分類は本数が0でも表示される")
+    void pinnedAlwaysShown() {
+        Map<String, Integer> counts = ThreadNameClassifier.count(List.of("a-1", "a-2"));
+        Assertions.assertEquals("audio=0 a-N=2", ThreadNameClassifier.format(counts, List.of("audio"), 5));
+    }
+
+    @Test
+    @DisplayName("固定表示の分類は本数が少なくても others に埋もれない")
+    void pinnedNotHiddenInOthers() {
+        List<String> names = new java.util.ArrayList<>();
+        for (int i = 0; i < 5; i++) {
+            names.add("worker-" + i + "-x");
+            names.add("other" + i + "-a");
+            names.add("other" + i + "-a");
+        }
+        names.add("JDA AudioWS-ReadThread (guildId: 1)");
+        String line = ThreadNameClassifier.format(ThreadNameClassifier.count(names), List.of("jda-audio-read"), 1);
+        Assertions.assertTrue(line.startsWith("jda-audio-read=1"), line);
+    }
+
+    @Test
+    @DisplayName("固定表示以外は上限まで表示し、残りは others にまとめられる")
+    void othersAreSummarized() {
         Map<String, Integer> counts = ThreadNameClassifier.count(List.of("a-1", "a-2", "b-1", "c-1", "d-1"));
-        Assertions.assertEquals("a-N=2 b-N=1 others=2", ThreadNameClassifier.format(counts, 2));
-        Assertions.assertEquals("", ThreadNameClassifier.format(Map.of(), 5));
+        Assertions.assertEquals("a-N=2 b-N=1 others=2", ThreadNameClassifier.format(counts, List.of(), 2));
+        Assertions.assertEquals("", ThreadNameClassifier.format(Map.of(), List.of(), 5));
     }
 }

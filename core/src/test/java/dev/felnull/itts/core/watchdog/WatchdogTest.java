@@ -7,6 +7,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import java.time.Duration;
@@ -109,6 +110,44 @@ public class WatchdogTest {
         }
 
         @Test
+        @DisplayName("定期ログには音声スレッドが0本でも表示され、totalの出典が付く")
+        void reportShowsPinnedCategoriesAndSource() {
+            WatchdogTest.this.watchdog.start();
+            WatchdogTest.this.watchdog.stop();
+            Mockito.clearInvocations(WatchdogTest.this.logger);
+
+            WatchdogTest.this.now.set(Duration.ofMinutes(10).toMillis());
+            WatchdogTest.this.watchdog.tick();
+
+            ArgumentCaptor<Object> args = ArgumentCaptor.forClass(Object.class);
+            Mockito.verify(WatchdogTest.this.logger).info(Mockito.startsWith("Threads:"), args.capture(), args.capture(), args.capture(),
+                    args.capture(), args.capture(), args.capture(), args.capture());
+            List<Object> values = args.getAllValues();
+            Assertions.assertEquals("100", values.get(0));
+            Assertions.assertEquals("test", values.get(1));
+            String breakdown = String.valueOf(values.get(4));
+            Assertions.assertTrue(breakdown.contains("jda-audio-read=0"), breakdown);
+            Assertions.assertTrue(breakdown.contains("async=1"), breakdown);
+        }
+
+        @Test
+        @DisplayName("OSから現在値を読めない時は、totalの出典がjvmになる")
+        void reportSourceFallsBackToJvm() {
+            WatchdogTest.this.limits.set(new ProcessLimits.Snapshot(OptionalLong.empty(), OptionalLong.empty(), "unavailable"));
+            WatchdogTest.this.watchdog.start();
+            WatchdogTest.this.watchdog.stop();
+            Mockito.clearInvocations(WatchdogTest.this.logger);
+
+            WatchdogTest.this.now.set(Duration.ofMinutes(10).toMillis());
+            WatchdogTest.this.watchdog.tick();
+
+            ArgumentCaptor<Object> args = ArgumentCaptor.forClass(Object.class);
+            Mockito.verify(WatchdogTest.this.logger).info(Mockito.startsWith("Threads:"), args.capture(), args.capture(), args.capture(),
+                    args.capture(), args.capture(), args.capture(), args.capture());
+            Assertions.assertEquals("jvm", args.getAllValues().get(1));
+        }
+
+        @Test
         @DisplayName("スレッド数が上限に近づくと強制終了する")
         void threadsNearLimit() {
             WatchdogTest.this.limits.set(new ProcessLimits.Snapshot(OptionalLong.of(512), OptionalLong.of(490), "test"));
@@ -146,7 +185,7 @@ public class WatchdogTest {
             WatchdogTest.this.now.set(Duration.ofMinutes(10).toMillis());
             WatchdogTest.this.watchdog.tick();
             Mockito.verify(WatchdogTest.this.logger).info(Mockito.startsWith("Threads:"), Mockito.any(), Mockito.any(), Mockito.any(),
-                    Mockito.any(), Mockito.any(), Mockito.any());
+                    Mockito.any(), Mockito.any(), Mockito.any(), Mockito.any());
 
             Mockito.clearInvocations(WatchdogTest.this.logger);
             WatchdogTest.this.now.set(Duration.ofMinutes(11).toMillis());

@@ -101,28 +101,47 @@ public final class ThreadNameClassifier {
     /**
      * 集計結果を1行の文字列にする
      *
-     * @param counts   分類ごとの本数
-     * @param maxItems 出力する分類数の上限
+     * <p>常に表示したい分類は、本数が少なくても必ず表示する。
+     * 残りは本数の多いものから上限まで表示し、それ以外は others にまとめる。</p>
+     *
+     * @param counts    分類ごとの本数
+     * @param pinned    常に表示する分類名。本数が0でも表示する
+     * @param maxOthers 常に表示する分類以外から表示する分類数の上限
      * @return 1行の文字列
      */
-    public static String format(Map<String, Integer> counts, int maxItems) {
+    public static String format(Map<String, Integer> counts, Collection<String> pinned, int maxOthers) {
         StringBuilder sb = new StringBuilder();
+
+        for (String key : pinned) {
+            appendItem(sb, key, counts.getOrDefault(key, 0));
+        }
+
         int shown = 0;
         int rest = 0;
         for (Map.Entry<String, Integer> e : counts.entrySet()) {
-            if (shown < maxItems) {
-                if (shown > 0) {
-                    sb.append(' ');
-                }
-                sb.append(e.getKey()).append('=').append(e.getValue());
+            if (pinned.contains(e.getKey())) {
+                continue;
+            }
+
+            if (shown < maxOthers) {
+                appendItem(sb, e.getKey(), e.getValue());
                 shown++;
             } else {
                 rest += e.getValue();
             }
         }
+
         if (rest > 0) {
-            sb.append(" others=").append(rest);
+            appendItem(sb, "others", rest);
         }
+
         return sb.toString();
+    }
+
+    private static void appendItem(StringBuilder sb, String key, int value) {
+        if (sb.length() > 0) {
+            sb.append(' ');
+        }
+        sb.append(key).append('=').append(value);
     }
 }
